@@ -62,7 +62,7 @@ def main():
 
         # Let's add now a "depth" camera attached to the vehicle. Note that the
         # transform we give here is now relative to the vehicle.
-        camera_bp = blueprintLibrary.find('sensor.camera.depth')
+        camera_bp = blueprintLibrary.find('sensor.camera.rgb')
         camera_transform = carla.Transform(carla.Location(x=1.5, z=2.4))
         camera = world.spawn_actor(camera_bp, camera_transform, attach_to=vehicle)
         actor_list.append(camera)
@@ -76,8 +76,7 @@ def main():
         cc = carla.ColorConverter.LogarithmicDepth
         camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame, cc))
         '''
-        cc = carla.ColorConverter.Raw
-        camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame,cc))
+        camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
     
 
         # Oh wait, I don't like the location we gave to the vehicle, I'm going
@@ -104,7 +103,7 @@ def main():
                 npc.set_autopilot(True)
                 print('created %s' % npc.type_id)
 
-        time.sleep(5)
+        time.sleep(30)
 
     finally:
         print('destroying actors')
