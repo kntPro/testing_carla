@@ -35,10 +35,6 @@ def main():
         client.set_timeout(2.0)
 
         world = client.get_world()
-        settings = world.get_settings()
-        settings.synchronous_mode = True
-        settings.fixed_delta_seconds = 0.05
-        world.apply_settings(settings)
         blueprintLibrary = world.get_blueprint_library()
 
         #ブループリントからvhicleを一つ取り出している
@@ -85,11 +81,11 @@ def main():
             camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
             print(vehicle.is_at_traffic_light())
         '''
-        #camera.listen(lambda : print(vehicle.is_at_traffic_light()))
+        camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
     
 
         # Oh wait, I don't like the location we gave to the vehicle, I'm going
-        # to move it a bit forward.
+        # to move it a bit forward
         location = vehicle.get_location()
         location.x += 40
         vehicle.set_location(location)
