@@ -22,6 +22,11 @@ exmaplesPath = ('ls %s'%(sys.path[-1])).split()
 subprocess.call((exmaplesPath))
 '''
 
+def retrieveImagesAndTrafficLightState(snapshot,vehicle,camera):
+    camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
+    print(vehicle.is_at_traffic_light())
+
+
 def main():
     actor_list = []
 
@@ -30,6 +35,10 @@ def main():
         client.set_timeout(2.0)
 
         world = client.get_world()
+        settings = world.get_settings()
+        settings.synchronous_mode = True
+        settings.fixed_delta_seconds = 0.05
+        world.apply_settings(settings)
         blueprintLibrary = world.get_blueprint_library()
 
         #ブループリントからvhicleを一つ取り出している
@@ -59,7 +68,6 @@ def main():
 
         # Let's put the vehicle to drive around.
         vehicle.set_autopilot(True)
-
         # Let's add now a "depth" camera attached to the vehicle. Note that the
         # transform we give here is now relative to the vehicle.
         camera_bp = blueprintLibrary.find('sensor.camera.rgb')
@@ -72,11 +80,15 @@ def main():
         # receives an image. In this example we are saving the image to disk
         # converting the pixels to gray-scale.
 
+        world_snapshot = world.wait_for_tick()
+        world.on_tick(lambda world_snapshot:retrieveImagesAndTrafficLightState(world_snapshot,vehicle,camera))
         '''
-        cc = carla.ColorConverter.LogarithmicDepth
-        camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame, cc))
+        while True:
+            world.tick()
+            camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
+            print(vehicle.is_at_traffic_light())
         '''
-        camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
+        #camera.listen(lambda : print(vehicle.is_at_traffic_light()))
     
 
         # Oh wait, I don't like the location we gave to the vehicle, I'm going
@@ -103,7 +115,9 @@ def main():
                 npc.set_autopilot(True)
                 print('created %s' % npc.type_id)
 
-        time.sleep(30)
+        
+
+        time.sleep(100)
 
     finally:
         print('destroying actors')
