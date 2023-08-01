@@ -79,9 +79,6 @@ def main():
         # Now we register the function that will be called each time the sensor
         # receives an image. In this example we are saving the image to disk
         # converting the pixels to gray-scale.
-
-        world_snapshot = world.wait_for_tick()
-        world.on_tick(lambda world_snapshot:retrieveImagesAndTrafficLightState(world_snapshot,vehicle,camera))
         '''
         while True:
             world.tick()
