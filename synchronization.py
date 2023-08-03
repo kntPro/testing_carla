@@ -54,6 +54,7 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(2.0)
     world = client.get_world()
+    f = open('traffic.txt','a')
 
     try:
         # We need to save the settings to be able to recover them at the end
@@ -116,7 +117,7 @@ def main():
         
         # Main loop
         ##while True:
-        for _ in range(10):
+        for _ in range(10000):
             # Tick the server
             world.tick()
             w_frame = world.get_snapshot().frame
@@ -132,6 +133,7 @@ def main():
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
                     print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
+                    f.write(f'{vehicle.is_at_traffic_light()} at {w_frame}\n')
 
             except Empty:
                 print("    Some of the sensor information is missed")
@@ -144,6 +146,7 @@ def main():
             print(f"destroyed {sensor.id}")
         vehicle.destroy()
         print("destroyed vehicle")
+        f.close()
 
 
 if __name__ == "__main__":
