@@ -20,7 +20,7 @@ This suppose that all the sensors gather information at every tick. It this is
 not the case, the clients needs to take in account at each frame how many
 sensors are going to tick at each frame.
 """
-
+import random
 import glob
 import os
 import sys
@@ -46,6 +46,7 @@ def sensor_callback(sensor_data, sensor_queue, sensor_name):
     # Do stuff with the sensor_data data like save it to disk
     # Then you just need to add to the queue
     sensor_queue.put((sensor_data.frame, sensor_name))
+    sensor_data.save_to_disk('_out_tick/%06d.png' % sensor_data.frame)
 
 
 def main():
@@ -61,7 +62,7 @@ def main():
         settings = world.get_settings()
 
         # We set CARLA syncronous mode
-        settings.fixed_delta_seconds = 0.2
+        settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = True
         world.apply_settings(settings)
 
@@ -73,16 +74,27 @@ def main():
         # Bluepints for the sensors
         blueprint_library = world.get_blueprint_library()
         cam_bp = blueprint_library.find('sensor.camera.rgb')
+        vehicle_bp = random.choice(blueprint_library.filter('vehicle'))
         lidar_bp = blueprint_library.find('sensor.lidar.ray_cast')
         radar_bp = blueprint_library.find('sensor.other.radar')
+
+        if vehicle_bp.has_attribute('color'):
+            color = random.choice(vehicle_bp.get_attribute('color').recommended_values)
+            vehicle_bp.set_attribute('color',color)
+
+        vehicle_transform = random.choice(world.get_map().get_spawn_points()) 
+        vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
+        vehicle.set_autopilot(True)
 
         # We create all the sensors and keep them in a list for convenience.
         sensor_list = []
 
-        cam01 = world.spawn_actor(cam_bp, carla.Transform())
+        cam01_transform = carla.Transform(carla.Location(x=1.5, z=2.4))
+        cam01 = world.spawn_actor(cam_bp, cam01_transform,attach_to=vehicle)
         cam01.listen(lambda data: sensor_callback(data, sensor_queue, "camera01"))
         sensor_list.append(cam01)
 
+        '''
         lidar_bp.set_attribute('points_per_second', '100000')
         lidar01 = world.spawn_actor(lidar_bp, carla.Transform())
         lidar01.listen(lambda data: sensor_callback(data, sensor_queue, "lidar01"))
@@ -100,9 +112,11 @@ def main():
         radar02 = world.spawn_actor(radar_bp, carla.Transform())
         radar02.listen(lambda data: sensor_callback(data, sensor_queue, "radar02"))
         sensor_list.append(radar02)
-
+        '''
+        
         # Main loop
-        while True:
+        ##while True:
+        for _ in range(10):
             # Tick the server
             world.tick()
             w_frame = world.get_snapshot().frame
@@ -117,14 +131,19 @@ def main():
                 for _ in range(len(sensor_list)):
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
+                    print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
 
             except Empty:
                 print("    Some of the sensor information is missed")
+
 
     finally:
         world.apply_settings(original_settings)
         for sensor in sensor_list:
             sensor.destroy()
+            print(f"destroyed {sensor.id}")
+        vehicle.destroy()
+        print("destroyed vehicle")
 
 
 if __name__ == "__main__":

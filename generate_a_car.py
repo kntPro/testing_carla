@@ -58,6 +58,7 @@ def main():
         # unless we call their "destroy" function. If we fail to call "destroy"
         # they will stay in the simulation even after we quit the Python script.
         # For that reason, we are storing all the actors we create so we can
+        
         # destroy them afterwards.
         actor_list.append(vehicle)
         print('created %s' % vehicle.type_id)
