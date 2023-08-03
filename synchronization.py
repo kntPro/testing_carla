@@ -37,6 +37,9 @@ except IndexError:
 
 import carla
 
+IMAGE_SIZE_X = '288'
+IMAGE_SIZE_Y = '288'
+
 
 # Sensor callback.
 # This is where you receive the sensor data and
@@ -75,6 +78,9 @@ def main():
         # Bluepints for the sensors
         blueprint_library = world.get_blueprint_library()
         cam_bp = blueprint_library.find('sensor.camera.rgb')
+        if cam_bp.has_attribute('image_size_x') and cam_bp.has_attribute('image_size_y'):
+            cam_bp.set_attribute('image_size_x',IMAGE_SIZE_X)
+            cam_bp.set_attribute('image_size_y',IMAGE_SIZE_Y)
         vehicle_bp = random.choice(blueprint_library.filter('vehicle'))
         lidar_bp = blueprint_library.find('sensor.lidar.ray_cast')
         radar_bp = blueprint_library.find('sensor.other.radar')
@@ -117,7 +123,7 @@ def main():
         
         # Main loop
         ##while True:
-        for _ in range(10000):
+        for _ in range(200):
             # Tick the server
             world.tick()
             w_frame = world.get_snapshot().frame
