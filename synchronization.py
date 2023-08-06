@@ -26,19 +26,10 @@ import os
 import sys
 from queue import Queue
 from queue import Empty
-
-try:
-    sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
-        sys.version_info.major,
-        sys.version_info.minor,
-        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
-except IndexError:
-    pass
-
+import pickle
 import carla
+from config import *
 
-IMAGE_SIZE_X = '288'
-IMAGE_SIZE_Y = '288'
 
 
 # Sensor callback.
@@ -57,7 +48,8 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(2.0)
     world = client.get_world()
-    f = open('traffic.txt','a')
+    f = open(TRAFFIC_LIGHT_BOOLEAN,"ab")
+    traffic_light_boolean = []
 
     try:
         # We need to save the settings to be able to recover them at the end
@@ -66,7 +58,7 @@ def main():
         settings = world.get_settings()
 
         # We set CARLA syncronous mode
-        settings.fixed_delta_seconds = 0.05
+        settings.fixed_delta_seconds = 0.017 
         settings.synchronous_mode = True
         world.apply_settings(settings)
 
@@ -82,8 +74,6 @@ def main():
             cam_bp.set_attribute('image_size_x',IMAGE_SIZE_X)
             cam_bp.set_attribute('image_size_y',IMAGE_SIZE_Y)
         vehicle_bp = random.choice(blueprint_library.filter('vehicle'))
-        lidar_bp = blueprint_library.find('sensor.lidar.ray_cast')
-        radar_bp = blueprint_library.find('sensor.other.radar')
 
         if vehicle_bp.has_attribute('color'):
             color = random.choice(vehicle_bp.get_attribute('color').recommended_values)
@@ -101,29 +91,11 @@ def main():
         cam01.listen(lambda data: sensor_callback(data, sensor_queue, "camera01"))
         sensor_list.append(cam01)
 
-        '''
-        lidar_bp.set_attribute('points_per_second', '100000')
-        lidar01 = world.spawn_actor(lidar_bp, carla.Transform())
-        lidar01.listen(lambda data: sensor_callback(data, sensor_queue, "lidar01"))
-        sensor_list.append(lidar01)
-
-        lidar_bp.set_attribute('points_per_second', '1000000')
-        lidar02 = world.spawn_actor(lidar_bp, carla.Transform())
-        lidar02.listen(lambda data: sensor_callback(data, sensor_queue, "lidar02"))
-        sensor_list.append(lidar02)
-
-        radar01 = world.spawn_actor(radar_bp, carla.Transform())
-        radar01.listen(lambda data: sensor_callback(data, sensor_queue, "radar01"))
-        sensor_list.append(radar01)
-
-        radar02 = world.spawn_actor(radar_bp, carla.Transform())
-        radar02.listen(lambda data: sensor_callback(data, sensor_queue, "radar02"))
-        sensor_list.append(radar02)
-        '''
+        
         
         # Main loop
         ##while True:
-        for _ in range(200):
+        for _ in range(TICK_COUNT):
             # Tick the server
             world.tick()
             w_frame = world.get_snapshot().frame
@@ -135,14 +107,15 @@ def main():
             # We include a timeout of 1.0 s (in the get method) and if some information is
             # not received in this time we continue.
             try:
-                for _ in range(len(sensor_list)):
+                for __ in range(len(sensor_list)):
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
                     print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
-                    f.write(f'{vehicle.is_at_traffic_light()} at {w_frame}\n')
-
+                    traffic_light_boolean.append(int(vehicle.is_at_traffic_light()))
             except Empty:
                 print("    Some of the sensor information is missed")
+        
+        pickle.dump(traffic_light_boolean,f) 
 
 
     finally:
@@ -153,6 +126,7 @@ def main():
         vehicle.destroy()
         print("destroyed vehicle")
         f.close()
+        print("closed file")
 
 
 if __name__ == "__main__":

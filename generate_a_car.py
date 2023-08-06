@@ -6,6 +6,7 @@ import subprocess
 import carla
 import random
 import time
+import pickle
 
 #carlaのPythonAPI/examplwsを参照している
 try:
@@ -76,12 +77,7 @@ def main():
         # Now we register the function that will be called each time the sensor
         # receives an image. In this example we are saving the image to disk
         # converting the pixels to gray-scale.
-        '''
-        while True:
-            world.tick()
-            camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
-            print(vehicle.is_at_traffic_light())
-        '''
+        
         camera.listen(lambda image: image.save_to_disk('_out/%06d.png' % image.frame))
     
 
