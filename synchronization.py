@@ -29,6 +29,7 @@ from queue import Empty
 import pickle
 import carla
 from config import *
+import time
 
 
 
@@ -116,7 +117,8 @@ def main():
                 print("    Some of the sensor information is missed")
         
         pickle.dump(traffic_light_boolean,f) 
-
+        time.sleep(10)    #最後に保存する画像が欠けないように
+    
 
     finally:
         world.apply_settings(original_settings)

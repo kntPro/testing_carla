@@ -2,9 +2,13 @@ import torch
 from torch import nn
 from torchvision.models import resnet18
 import torchvision.transforms as transforms 
-from torchvision.io import read_image
-from torch.utils.data import DataLoader
-from PIL import image
+from torchvision.io import read_image, write_png
+from torch.utils.data import DataLoader, Dataset
+from torchvision.io import ImageReadMode
+from PIL import Image
+#from pathlib import Path
+import os
+from config import *
 
 '''
 training_data = datasets.FashionMNIST(
@@ -25,6 +29,33 @@ device = (
     if torch.backends.mps.is_available()
     else "cpu"
 )
+
+
+class imageDataset(Dataset):
+    # パスとtransformの取得
+  def __init__(self, img_dir, transform=None):
+        self.img_paths = self._get_img_paths(img_dir)
+        self.transform = transform
+
+  # データの取得
+  def __getitem__(self, index):
+      path = self.img_paths[index]
+      img = read_image(path,mode=ImageReadMode.RGB)
+      #if self.transform is not None:
+          #img = self.transform(img)
+      return img
+  
+  # パスの取得
+  def _get_img_paths(self, img_dir):
+      img_dir = os.path.abspath(img_dir)
+      img_paths = [img_dir+"/"+p for p in sorted(os.listdir(img_dir)) if os.path.splitext(p)[1] in [".jpg", ".jpeg", ".png", ".bmp"]]
+      return img_paths
+
+  # ながさの取得
+  def __len__(self):
+      return len(self.img_paths)
+
+
 
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
@@ -65,12 +96,21 @@ def get_resnet(num_classes: int=10) -> nn.Module:
 
 
 def main():
-    model = get_resnet()
-    loss_fn = nn.CrossEntropyLoss()
-    epochs = 5
+    #model = get_resnet()
+    #loss_fn = nn.CrossEntropyLoss()
+    #epochs = 5
+    transform = transforms.Compose([transforms.ToTensor()])
+    datasets = imageDataset(IMAGE_PATH, transform)
+    dataloader = DataLoader(datasets, batch_size=256)
     
-    test(test_dataloader, model, loss_fn)
+    #test(test_dataloader, model, loss_fn)
+    for x in dataloader:
+        print(x.shape)
+    for i in sorted(os.listdir(IMAGE_PATH)):
+        print(i)    
+    print(len(datasets))   
     print("Done!")
+
 
     
 
