@@ -5,10 +5,10 @@ import torchvision.transforms as transforms
 from torchvision.io import read_image, write_png
 from torch.utils.data import DataLoader, Dataset
 from torchvision.io import ImageReadMode
-from PIL import Image
-#from pathlib import Path
 import os
 from config import *
+import pickle
+from separateImg import separate_img
 
 '''
 training_data = datasets.FashionMNIST(
@@ -99,18 +99,27 @@ def main():
     #model = get_resnet()
     #loss_fn = nn.CrossEntropyLoss()
     #epochs = 5
-    transform = transforms.Compose([transforms.ToTensor()])
-    datasets = imageDataset(IMAGE_PATH, transform)
-    dataloader = DataLoader(datasets, batch_size=256)
-    
-    #test(test_dataloader, model, loss_fn)
-    for x in dataloader:
-        print(x.shape)
-    for i in sorted(os.listdir(IMAGE_PATH)):
-        print(i)    
-    print(len(datasets))   
-    print("Done!")
+    #transform = transforms.Compose([transforms.ToTensor()])
+    #train_data, test_data= imageDataset(IMAGE_PATH)
+    #separate_img(IMAGE_PATH)
+    train_dataset = imageDataset("data/train")
+    test_dataset = imageDataset("data/test")
+    train_data = DataLoader(train_dataset,batch_size=BATCH_SIZE)
+    test_data = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+    for i in train_data:
+        print(i.shape)
+    '''
+    train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE)
+    test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE)
+    with open(TRAFFIC_LIGHT_BOOLEAN,"rb") as f:
+        supervise_data = pickle.load(f)
 
+    #test(test_dataloader, model, loss_fn)
+    print(train_dataloader.shape)
+    print(test_dataloader.shape)
+    print(supervise_data)
+    print("Done!")
+'''
 
     
 
