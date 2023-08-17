@@ -8,19 +8,7 @@ from torchvision.io import ImageReadMode
 import os
 from config import *
 import pickle
-from separateImg import separate_img
-
-'''
-training_data = datasets.FashionMNIST(
-    root="data",
-    train=True,
-    download=True,
-    transform=ToTensor(),
-)
-
-
-test_dataloader = DataLoader(test_data, batch_size=64)
-'''
+from separate import separate_label, separate_img
 
 device = (
     "cuda"
@@ -28,39 +16,69 @@ device = (
     else "mps"
     if torch.backends.mps.is_available()
     else "cpu"
-)
+)  
 
-
-class imageDataset(Dataset):
-    # パスとtransformの取得
-  def __init__(self, img_dir, transform=None):
+#separate.py
+class TensorImageDataset(Dataset):
+    #label_fileは"/data内のtestかtrainのパス、img_dirは画像があるフォルダのパスにする
+    def __init__(self, label_file, img_dir, transform=None, target_transform=None) -> None:
+        self.img_labels = self._open_label_data(label_file) 
         self.img_paths = self._get_img_paths(img_dir)
         self.transform = transform
+        self.target_transform = target_transform
+        print(len(self.img_labels))
+        print(len(self.img_paths))
 
-  # データの取得
-  def __getitem__(self, index):
-      path = self.img_paths[index]
-      img = read_image(path,mode=ImageReadMode.RGB)
-      #if self.transform is not None:
-          #img = self.transform(img)
-      return img
-  
-  # パスの取得
-  def _get_img_paths(self, img_dir):
-      img_dir = os.path.abspath(img_dir)
-      img_paths = [img_dir+"/"+p for p in sorted(os.listdir(img_dir)) if os.path.splitext(p)[1] in [".jpg", ".jpeg", ".png", ".bmp"]]
-      return img_paths
+    def __len__(self):
+        return len(self.img_labels)
+    
+    def __getitem__(self, idx):
+        img_path = self.img_paths[idx]
+        image = read_image(img_path, mode=ImageReadMode.RGB).to(torch.float32)
+        label = self.img_labels[idx]
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return image, label
+    
+    def _get_img_paths(self, img_dir):
+        img_dir = os.path.abspath(img_dir)
+        img_paths = [img_dir+"/"+p for p in sorted(os.listdir(img_dir)) if os.path.splitext(p)[1] in [".jpg", ".jpeg", ".png", ".bmp"]]
+        return img_paths
+    
+    def _open_label_data(self,label_file):
+        abs_label_path = os.path.abspath(label_file)
+        with open(abs_label_path,"rb") as label:
+            l = pickle.load(label)
+        return l
 
-  # ながさの取得
-  def __len__(self):
-      return len(self.img_paths)
 
+def train(dataloader, model, loss_fn, optimizer):
+    size = len(dataloader.dataset)
+    model.train()
+    for batch, (X, y) in enumerate(dataloader):
+        X = X.to(device)
+        y = y.to(device)
+
+        # Compute prediction error
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 100 == 0:
+            loss, current = loss.item(), (batch + 1) * len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
-    model.cuda()
+    model.eval()
     test_loss, correct = 0, 0
     with torch.no_grad():
         for X, y in dataloader:
@@ -73,13 +91,13 @@ def test(dataloader, model, loss_fn):
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
 
-def get_resnet(num_classes: int=10) -> nn.Module:
+def get_resnet(num_classes: int=2) -> nn.Module:
    # ImageNetで事前学習済みの重みをロード
     model = resnet18(weights='DEFAULT')
-    model.to(device)
+
    # ここで更新する部分の重みは初期化される
     model.conv1 = nn.Conv2d(
-        in_channels=1,
+        in_channels=3,
         out_channels=64,
         kernel_size=model.conv1.kernel_size,
         stride=model.conv1.stride,
@@ -96,31 +114,20 @@ def get_resnet(num_classes: int=10) -> nn.Module:
 
 
 def main():
-    #model = get_resnet()
-    #loss_fn = nn.CrossEntropyLoss()
-    #epochs = 5
-    #transform = transforms.Compose([transforms.ToTensor()])
-    #train_data, test_data= imageDataset(IMAGE_PATH)
-    #separate_img(IMAGE_PATH)
-    train_dataset = imageDataset("data/train")
-    test_dataset = imageDataset("data/test")
-    train_data = DataLoader(train_dataset,batch_size=BATCH_SIZE)
-    test_data = DataLoader(test_dataset, batch_size=BATCH_SIZE)
-    for i in train_data:
-        print(i.shape)
-    '''
-    train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE)
-    test_dataloader = DataLoader(test_data, batch_size=BATCH_SIZE)
-    with open(TRAFFIC_LIGHT_BOOLEAN,"rb") as f:
-        supervise_data = pickle.load(f)
+    train_dataset = TensorImageDataset(LABEL_TRAIN_PATH,IMG_TRAIN_PATH)
+    test_dataset = TensorImageDataset(LABEL_TEST_PATH,IMG_TEST_PATH)
+    train_dataloader = DataLoader(train_dataset, batch_size=1)
+    test_dataloader = DataLoader(test_dataset, batch_size=1)
 
-    #test(test_dataloader, model, loss_fn)
-    print(train_dataloader.shape)
-    print(test_dataloader.shape)
-    print(supervise_data)
+    model = get_resnet().to(device)
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters())
+    
+    for t in range(EPOCH):
+        print(f"Epoch {t+1}\n-------------------------------")
+        train(train_dataloader, model, loss_fn, optimizer)
+        test(test_dataloader, model, loss_fn)
     print("Done!")
-'''
-
     
 
 

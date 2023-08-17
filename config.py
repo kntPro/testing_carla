@@ -1,4 +1,6 @@
 TRAFFIC_LIGHT_INT_PATH = "traffic_light_int"
+LABEL_TRAIN_PATH = "data/train_label"
+LABEL_TEST_PATH = "data/test_label"
 IMG_TRAIN_PATH = "data/train"
 IMG_TEST_PATH = "data/test"
 IMAGE_SIZE_X = '288'
@@ -8,3 +10,4 @@ TEST_NUM = 10
 TICK_COUNT = TRAIN_NUM + TEST_NUM 
 IMAGE_PATH = './_out_tick'
 BATCH_SIZE = 256
+EPOCH = 5
