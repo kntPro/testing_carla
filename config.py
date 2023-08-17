@@ -1,4 +1,4 @@
-TRAFFIC_LIGHT_BOOLEAN = "traffic_light_boolean"
+TRAFFIC_LIGHT_INT = "traffic_light_int"
 IMAGE_SIZE_X = '288'
 IMAGE_SIZE_Y = '288'
 TRAIN_NUM = 10

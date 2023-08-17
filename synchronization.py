@@ -49,8 +49,8 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(2.0)
     world = client.get_world()
-    f = open(TRAFFIC_LIGHT_BOOLEAN,"ab")
-    traffic_light_boolean = []
+    f = open(TRAFFIC_LIGHT_INT,"ab")
+    traffic_light_int = []
 
     try:
         # We need to save the settings to be able to recover them at the end
@@ -112,11 +112,11 @@ def main():
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
                     print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
-                    traffic_light_boolean.append(int(vehicle.is_at_traffic_light()))
+                    traffic_light_int.append(int(vehicle.is_at_traffic_light()))
             except Empty:
                 print("    Some of the sensor information is missed")
         
-        pickle.dump(traffic_light_boolean,f) 
+        pickle.dump(traffic_light_int,f) 
         time.sleep(10)    #最後に保存する画像が欠けないように
     
 
