@@ -26,8 +26,6 @@ class TensorImageDataset(Dataset):
         self.img_paths = self._get_img_paths(img_dir)
         self.transform = transform
         self.target_transform = target_transform
-        print(len(self.img_labels))
-        print(len(self.img_paths))
 
     def __len__(self):
         return len(self.img_labels)

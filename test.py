@@ -27,7 +27,7 @@ print(a[:5])
 print(a[5:5+5])
 '''
 
-'''
+
 with open(LABEL_TEST_PATH,"rb") as test:
     test_label = pickle.load(test)
     print(test_label)
@@ -35,11 +35,6 @@ with open(LABEL_TEST_PATH,"rb") as test:
 with open(LABEL_TRAIN_PATH,"rb") as train:
     train_label = pickle.load(train)
     print(train_label)
-'''
-
-with open(TRAFFIC_LIGHT_INT_PATH,"rb") as traffic:
-    label = pickle.load(traffic)
-print(type(label[TRAIN_NUM:TRAIN_NUM + TEST_NUM]))
 
 
 test_dataset = TensorImageDataset(LABEL_TEST_PATH,IMG_TRAIN_PATH)
