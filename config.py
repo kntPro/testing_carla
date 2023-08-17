@@ -1,4 +1,6 @@
-TRAFFIC_LIGHT_INT = "traffic_light_int"
+TRAFFIC_LIGHT_INT_PATH = "traffic_light_int"
+IMG_TRAIN_PATH = "data/train"
+IMG_TEST_PATH = "data/test"
 IMAGE_SIZE_X = '288'
 IMAGE_SIZE_Y = '288'
 TRAIN_NUM = 10
