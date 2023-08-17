@@ -74,7 +74,7 @@ def main():
         if cam_bp.has_attribute('image_size_x') and cam_bp.has_attribute('image_size_y'):
             cam_bp.set_attribute('image_size_x',IMAGE_SIZE_X)
             cam_bp.set_attribute('image_size_y',IMAGE_SIZE_Y)
-        vehicle_bp = random.choice(blueprint_library.filter('vehicle'))
+        vehicle_bp = blueprint_library.find("vehicle.audi.a2")
 
         if vehicle_bp.has_attribute('color'):
             color = random.choice(vehicle_bp.get_attribute('color').recommended_values)
