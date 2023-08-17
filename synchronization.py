@@ -49,7 +49,7 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(2.0)
     world = client.get_world()
-    f = open(TRAFFIC_LIGHT_INT,"ab")
+    f = open(TRAFFIC_LIGHT_INT_PATH,"ab")
     traffic_light_int = []
 
     try:
