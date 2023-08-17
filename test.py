@@ -27,7 +27,7 @@ print(a[:5])
 print(a[5:5+5])
 '''
 
-
+'''
 with open(LABEL_TEST_PATH,"rb") as test:
     test_label = pickle.load(test)
     print(test_label)
@@ -43,3 +43,10 @@ for X,y in test_dataloader:
     print(f"Shape of X [N, C, H, W]: {X.shape}")
     print(f"Shape of y: {y.shape} {y.dtype}")
     break
+'''
+
+with open(TRAFFIC_LIGHT_INT_PATH,"rb") as traffic:
+    label = pickle.load(traffic)
+
+print(1 in label)
+print(0 in label)
