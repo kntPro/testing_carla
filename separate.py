@@ -21,14 +21,14 @@ def separate_label(annotation_file):
         labels = pickle.load(f)
     train_label_list = labels[:TRAIN_NUM]
     test_label_list = labels[TRAIN_NUM:TRAIN_NUM + TEST_NUM]
-    with open(LABEL_TRAIN_PATH,"ab") as train_label_file:
+    with open(LABEL_TRAIN_PATH,"wb") as train_label_file:
         pickle.dump(train_label_list,train_label_file)
-    with open(LABEL_TEST_PATH,"ab") as test_label_file:
+    with open(LABEL_TEST_PATH,"wb") as test_label_file:
         pickle.dump(test_label_list,test_label_file)
 
 
 def main():
-    #separate_img(IMAGE_PATH)
+    separate_img(IMAGE_PATH)
     separate_label(TRAFFIC_LIGHT_INT_PATH)
 
 if __name__ == "__main__":
