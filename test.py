@@ -2,6 +2,7 @@ import pickle
 from config import *
 from train_Resnet18 import TensorImageDataset
 from torch.utils.data import DataLoader, Dataset
+from train_Resnet18 import get_resnet
 
 
 '''
@@ -45,8 +46,14 @@ for X,y in test_dataloader:
     break
 '''
 
+'''
 with open(TRAFFIC_LIGHT_INT_PATH,"rb") as traffic:
     label = pickle.load(traffic)
 
 print(1 in label)
 print(0 in label)
+'''
+
+model = get_resnet()
+with open("model_architecture.txt","w") as f:
+    print(model,file=f)
