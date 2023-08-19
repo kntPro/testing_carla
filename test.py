@@ -38,13 +38,14 @@ with open(LABEL_TRAIN_PATH,"rb") as train:
     train_label = pickle.load(train)
     print(train_label)
 '''
-
+'''
 test_dataset = TensorImageDataset(LABEL_TEST_PATH,IMG_TRAIN_PATH)
 test_dataloader = DataLoader(test_dataset)
 for X,y in test_dataloader:
     print(f"Shape of X [N, C, H, W]: {X.shape}")
     print(f"Shape of y: {y.shape} {y.dtype}")
     break
+'''
 
 '''
 with open(TRAFFIC_LIGHT_INT_PATH,"rb") as traffic:
@@ -70,3 +71,11 @@ print(a.shape)
 print(c.shape)
 '''
 
+with open("traffic_light_int","rb") as t:
+    traffic = pickle.load(t)
+ 
+for i in range(len(traffic)-1):
+    if not traffic[i] == traffic[i+1]:
+        print(i)
+
+print(len(traffic))
