@@ -3,6 +3,7 @@ from config import *
 from train_Resnet18 import TensorImageDataset
 from torch.utils.data import DataLoader, Dataset
 from train_Resnet18 import get_resnet
+import torch
 
 
 '''
@@ -36,7 +37,7 @@ with open(LABEL_TEST_PATH,"rb") as test:
 with open(LABEL_TRAIN_PATH,"rb") as train:
     train_label = pickle.load(train)
     print(train_label)
-
+'''
 
 test_dataset = TensorImageDataset(LABEL_TEST_PATH,IMG_TRAIN_PATH)
 test_dataloader = DataLoader(test_dataset)
@@ -44,7 +45,6 @@ for X,y in test_dataloader:
     print(f"Shape of X [N, C, H, W]: {X.shape}")
     print(f"Shape of y: {y.shape} {y.dtype}")
     break
-'''
 
 '''
 with open(TRAFFIC_LIGHT_INT_PATH,"rb") as traffic:
@@ -54,6 +54,19 @@ print(1 in label)
 print(0 in label)
 '''
 
+'''
 model = get_resnet()
 with open("model_architecture.txt","w") as f:
     print(model,file=f)
+'''
+
+'''
+a = torch.ones(1,2,3)
+d = torch.stack((a,a,a,a))
+b = tuple(d[i] for i in range(4))
+c = torch.stack(b)
+
+print(a.shape)
+print(c.shape)
+'''
+
