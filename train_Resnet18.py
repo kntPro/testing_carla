@@ -28,12 +28,13 @@ class TensorImageDataset(Dataset):
         self.target_transform = target_transform
 
     def __len__(self):
-        return len(self.img_labels)
+        return len(self.img_labels)-IMAGE_NUM
     
     def __getitem__(self, idx):
-        img_path = self.img_paths[idx]
-        image = read_image(img_path, mode=ImageReadMode.RGB).to(torch.float32)
-        label = self.img_labels[idx]
+        image_path_tuple = tuple(read_image(self.img_paths[i], mode=ImageReadMode.RGB).to(torch.float32) for i in range(idx,idx+IMAGE_NUM))
+        image = torch.stack(image_path_tuple)
+        label_set = set(torch.tensor(self.img_labels[i]) for i in range(idx,idx+IMAGE_NUM))
+        label = int(1 in label_set)
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
@@ -95,7 +96,7 @@ def get_resnet(num_classes: int=2) -> nn.Module:
 
    # ここで更新する部分の重みは初期化される
     model.conv1 = nn.Conv2d(
-        in_channels=3,
+        in_channels=3*IMAGE_NUM,
         out_channels=64,
         kernel_size=model.conv1.kernel_size,
         stride=model.conv1.stride,
