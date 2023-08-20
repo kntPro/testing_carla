@@ -4,6 +4,8 @@ from train_Resnet18 import TensorImageDataset
 from torch.utils.data import DataLoader, Dataset
 from train_Resnet18 import get_resnet
 import torch
+from torchvision.io import read_image,ImageReadMode
+import os
 
 
 '''
@@ -62,16 +64,18 @@ with open("model_architecture.txt","w") as f:
 '''
 
 '''
-a = torch.ones(1,2,3)
-d = torch.stack((a,a,a,a))
-b = tuple(d[i] for i in range(4))
-c = torch.stack(b)
+a = torch.ones(2,3)
+d = torch.concat((a,a,a,a),)
+#b = tuple(d[i] for i in range(4))
+#c = torch.stack(b)
 
 print(a.shape)
-print(c.shape)
+print(d.shape)
+#print(c.shape)
 '''
 
-with open("traffic_light_int","rb") as t:
+'''
+with open(TRAFFIC_LIGHT_INT_PATH,"rb") as t:
     traffic = pickle.load(t)
  
 for i in range(len(traffic)-1):
@@ -79,3 +83,8 @@ for i in range(len(traffic)-1):
         print(i)
 
 print(len(traffic))
+'''
+
+a = tuple(read_image(path=os.path.join(IMAGE_PATH,os.listdir(IMAGE_PATH)[i]), mode=ImageReadMode.RGB) for i in range(4))
+b = torch.concat(a)
+print(b.shape)
