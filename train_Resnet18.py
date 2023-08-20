@@ -9,6 +9,7 @@ import os
 from config import *
 import pickle
 from separate import separate_label, separate_img
+from tqdm import tqdm
 
 device = (
     "cuda"
@@ -32,7 +33,7 @@ class TensorImageDataset(Dataset):
     
     def __getitem__(self, idx):
         image_path_tuple = tuple(read_image(self.img_paths[i], mode=ImageReadMode.RGB).to(torch.float32) for i in range(idx,idx+IMAGE_NUM))
-        image = torch.stack(image_path_tuple)
+        image = torch.concat(image_path_tuple)
         label_set = set(torch.tensor(self.img_labels[i]) for i in range(idx,idx+IMAGE_NUM))
         label = int(1 in label_set)
         if self.transform:
@@ -56,7 +57,7 @@ class TensorImageDataset(Dataset):
 def train(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
     model.train()
-    for batch, (X, y) in enumerate(dataloader):
+    for batch, (X, y) in enumerate(tqdm(dataloader)):
         X = X.to(device)
         y = y.to(device)
 
@@ -115,14 +116,14 @@ def get_resnet(num_classes: int=2) -> nn.Module:
 def main():
     train_dataset = TensorImageDataset(LABEL_TRAIN_PATH,IMG_TRAIN_PATH)
     test_dataset = TensorImageDataset(LABEL_TEST_PATH,IMG_TEST_PATH)
-    train_dataloader = DataLoader(train_dataset, batch_size=1)
-    test_dataloader = DataLoader(test_dataset, batch_size=1)
+    train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
+    test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
     model = get_resnet().to(device)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters())
     
-    for t in range(EPOCH):
+    for t in tqdm(range(EPOCH)):
         print(f"Epoch {t+1}\n-------------------------------")
         train(train_dataloader, model, loss_fn, optimizer)
         test(test_dataloader, model, loss_fn)
