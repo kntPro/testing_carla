@@ -49,6 +49,7 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(2.0)
     world = client.get_world()
+    tm = client.get_trafficmanager(8000)
     f = open(TRAFFIC_LIGHT_INT_PATH,"wb")
     traffic_light_int = []
 
@@ -62,6 +63,7 @@ def main():
         settings.fixed_delta_seconds = 0.017 
         settings.synchronous_mode = True
         world.apply_settings(settings)
+        tm.set_synchronous_mode(True)
 
         # We create the sensor queue in which we keep track of the information
         # already received. This structure is thread safe and can be
@@ -82,7 +84,7 @@ def main():
 
         vehicle_transform = random.choice(world.get_map().get_spawn_points()) 
         vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
-        vehicle.set_autopilot(True)
+        tm.vehicle_percentage_speed_difference(vehicle, -300.)
 
         # We create all the sensors and keep them in a list for convenience.
         sensor_list = []
@@ -99,6 +101,7 @@ def main():
         for _ in range(TICK_COUNT):
             # Tick the server
             world.tick()
+            vehicle.set_autopilot(True)
             w_frame = world.get_snapshot().frame
             print("\nWorld's frame: %d" % w_frame)
 
