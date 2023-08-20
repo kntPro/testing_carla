@@ -85,6 +85,22 @@ for i in range(len(traffic)-1):
 print(len(traffic))
 '''
 
+'''
 a = tuple(read_image(path=os.path.join(IMAGE_PATH,os.listdir(IMAGE_PATH)[i]), mode=ImageReadMode.RGB) for i in range(4))
 b = torch.concat(a)
 print(b.shape)
+'''
+
+#'''
+with open(LABEL_TEST_PATH,"rb") as t:
+    test = pickle.load(t)
+with open(LABEL_TRAIN_PATH,"rb") as t:
+    train = pickle.load(t)
+
+count =0
+for i in range(len(train)-1):
+    if not train[i] == train[i+1]:
+        print(i)
+        count+=1
+
+print(count)
