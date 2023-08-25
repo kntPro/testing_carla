@@ -107,7 +107,7 @@ def main():
 
         
 
-        time.sleep(100)
+        time.sleep(10)
 
     finally:
         print('destroying actors')
