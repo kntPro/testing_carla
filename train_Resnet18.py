@@ -3,8 +3,9 @@ from torch import nn
 from torchvision.models import resnet18
 import torchvision.transforms as transforms 
 from torchvision.io import read_image, write_png
-from torch.utils.data import DataLoader, Dataset
 from torchvision.io import ImageReadMode
+from torch.utils.data import DataLoader, Dataset
+from torch.utils.tensorboard import SummaryWriter
 import os
 from config import *
 import pickle
@@ -54,9 +55,10 @@ class TensorImageDataset(Dataset):
         return l
 
 
-def train(dataloader, model, loss_fn, optimizer):
+def train(dataloader, model, loss_fn, optimizer, on_write:bool=False):
     size = len(dataloader.dataset)
     model.train()
+    writer = SummaryWriter()
     for batch, (X, y) in enumerate(tqdm(dataloader)):
         X = X.to(device)
         y = y.to(device)
@@ -64,6 +66,8 @@ def train(dataloader, model, loss_fn, optimizer):
         # Compute prediction error
         pred = model(X)
         loss = loss_fn(pred, y)
+        if(on_write):
+            writer.add_scalar("loss", loss, batch)
 
         # Backpropagation
         loss.backward()
@@ -73,6 +77,8 @@ def train(dataloader, model, loss_fn, optimizer):
         if batch % 100 == 0:
             loss, current = loss.item(), (batch + 1) * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+    
+    writer.close()
 
 
 def test(dataloader, model, loss_fn):
@@ -125,8 +131,10 @@ def main():
     
     for t in tqdm(range(EPOCH)):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(train_dataloader, model, loss_fn, optimizer)
+        train(train_dataloader, model, loss_fn, optimizer, on_write=True)
         test(test_dataloader, model, loss_fn)
+
+    torch.save(model.state_dict(),"model/trained_resnet18")
     print("Done!")
     
 

@@ -2,8 +2,10 @@ import pickle
 from config import *
 from train_Resnet18 import TensorImageDataset
 from torch.utils.data import DataLoader, Dataset
+from torch.utils.tensorboard import SummaryWriter
 from train_Resnet18 import get_resnet
 import torch
+from torch import nn
 from torchvision.io import read_image,ImageReadMode
 import os
 
@@ -91,7 +93,7 @@ b = torch.concat(a)
 print(b.shape)
 '''
 
-#'''
+'''
 with open(LABEL_TEST_PATH,"rb") as t:
     test = pickle.load(t)
 with open(LABEL_TRAIN_PATH,"rb") as t:
@@ -104,3 +106,33 @@ for i in range(len(train)-1):
         count+=1
 
 print(count)
+'''
+
+'''
+loss_fn = nn.MSELoss()
+writer = SummaryWriter()
+loss = []
+for i in range(int(1e4)):
+    loss = loss_fn(torch.randn(1),torch.tensor(1))
+    writer.add_scalar("random_closed",loss,i)
+writer.close()
+'''
+
+'''
+class DummyModel(nn.Module):
+    def __init__(self):
+        super(DummyModel, self).__init__()
+
+        self.l1 = nn.Linear(100, 10)
+        self.l2 = nn.Linear(10, 10)
+
+    def forward(self, x):
+        h1 = torch.nn.functional.tanh(self.l1(x))
+        return self.l2(h1)
+m = DummyModel()
+m = m.cuda()
+torch.save(m,"model/test_model")
+'''
+
+m = torch.load("model/test_model")
+# print(m)

@@ -1,4 +1,4 @@
-TRAFFIC_LIGHT_INT_PATH = "traffic_light_int"
+TRAFFIC_LIGHT_INT_PATH = "data/traffic_light_int"
 LABEL_TRAIN_PATH = "data/train_label"
 LABEL_TEST_PATH = "data/test_label"
 IMG_TRAIN_PATH = "data/train"
@@ -11,4 +11,4 @@ TRAIN_NUM = int(8e4)
 TEST_NUM = int(2e4)
 TICK_COUNT = TRAIN_NUM + TEST_NUM 
 BATCH_SIZE = 256
-EPOCH = 5
+EPOCH = 1 
