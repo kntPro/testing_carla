@@ -1,1 +1,5 @@
 data/
+_*/
+!__pycache__/
+model/
+*.mp4
