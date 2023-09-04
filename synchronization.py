@@ -41,7 +41,7 @@ def sensor_callback(sensor_data, sensor_queue, sensor_name):
     # Do stuff with the sensor_data data like save it to disk
     # Then you just need to add to the queue
     sensor_queue.put((sensor_data.frame, sensor_name))
-    sensor_data.save_to_disk('_out_tick/%06d.png' % sensor_data.frame)
+    sensor_data.save_to_disk('_out_tick/%-s:%06d.png' % (sensor_name,sensor_data.frame))
 
 
 def main():
@@ -72,6 +72,8 @@ def main():
 
         # Bluepints for the sensors
         blueprint_library = world.get_blueprint_library()
+        
+        
         cam_bp = blueprint_library.find('sensor.camera.rgb')
         if cam_bp.has_attribute('image_size_x') and cam_bp.has_attribute('image_size_y'):
             cam_bp.set_attribute('image_size_x',IMAGE_SIZE_X)
@@ -89,10 +91,21 @@ def main():
         # We create all the sensors and keep them in a list for convenience.
         sensor_list = []
 
-        cam01_transform = carla.Transform(carla.Location(x=1.5, z=2.4))
-        cam01 = world.spawn_actor(cam_bp, cam01_transform,attach_to=vehicle)
-        cam01.listen(lambda data: sensor_callback(data, sensor_queue, "camera01"))
-        sensor_list.append(cam01)
+        front_cam_transform = carla.Transform(carla.Location(x=2.0, z=2.0))
+        left_cam_transform = carla.Transform(carla.Location(x=2.0, y=-1.0, z=2.0), carla.Rotation(yaw=-80))
+        right_cam_transform = carla.Transform(carla.Location(x=2.0, y=1.0, z=2.0), carla.Rotation(yaw=80))
+
+        front_cam = world.spawn_actor(cam_bp, front_cam_transform,attach_to=vehicle)
+        front_cam.listen(lambda data:sensor_callback(data, sensor_queue, "front_cam"))
+        sensor_list.append(front_cam)
+
+        left_cam = world.spawn_actor(cam_bp, left_cam_transform, attach_to=vehicle)
+        left_cam.listen(lambda data:sensor_callback(data, sensor_queue, "left_cam"))
+        sensor_list.append(left_cam)
+
+        right_cam = world.spawn_actor(cam_bp, right_cam_transform, attach_to=vehicle)
+        right_cam.listen(lambda data:sensor_callback(data, sensor_queue, "right_cam"))
+        sensor_list.append(right_cam)
 
         
         
@@ -114,8 +127,8 @@ def main():
                 for __ in range(len(sensor_list)):
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
-                    print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
-                    traffic_light_int.append(int(vehicle.is_at_traffic_light()))
+                print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
+                traffic_light_int.append(int(vehicle.is_at_traffic_light()))   
             except Empty:
                 print("    Some of the sensor information is missed")
         
