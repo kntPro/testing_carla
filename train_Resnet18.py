@@ -128,7 +128,7 @@ def train(dataloader, model, loss_fn, optimizer, on_write:bool=False):
     writer.close()
 
 
-def test(dataloader, model, loss_fn):
+def test(dataloader, model, loss_fn, log_file=None):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     model.eval()
@@ -142,6 +142,8 @@ def test(dataloader, model, loss_fn):
     test_loss /= num_batches
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    if log_file:
+        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n",file=log_file)
 
 
 def get_resnet(num_classes: int=2) -> nn.Module:
@@ -176,12 +178,15 @@ def main():
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters())
     
+    log = open("log.txt","wt")
+
     for t in tqdm(range(EPOCH)):
         print(f"Epoch {t+1}\n-------------------------------")
         train(train_dataloader, model, loss_fn, optimizer, on_write=True)
-        test(test_dataloader, model, loss_fn)
+        test(test_dataloader, model, loss_fn, log_file=log)
 
     torch.save(model.state_dict(),"model/trained_resnet18")
+    log.close()
     print("Done!")
     
 
