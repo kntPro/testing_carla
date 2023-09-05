@@ -1,8 +1,8 @@
 TRAFFIC_LIGHT_INT_PATH = "data/traffic_light_int"
-LABEL_TRAIN_PATH = "data/train_label"
-LABEL_TEST_PATH = "data/test_label"
-IMG_TRAIN_PATH = "data/train"
-IMG_TEST_PATH = "data/test"
+LABEL_TRAIN_PATH = "data3cam/train_label"
+LABEL_TEST_PATH = "data3cam/test_label"
+IMG_TRAIN_PATH = "data3cam/train/"
+IMG_TEST_PATH = "data3cam/test/"
 IMAGE_SIZE_X = '288'
 IMAGE_SIZE_Y = '288'
 IMAGE_PATH = './_out_3cam'
