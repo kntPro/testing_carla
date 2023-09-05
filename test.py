@@ -1,6 +1,6 @@
 import pickle
 from config import *
-from train_Resnet18 import TensorImageDataset
+from train_Resnet18 import TensorImageDataset,ThreeImageToTensorDataset
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
 from train_Resnet18 import get_resnet
@@ -8,6 +8,7 @@ import torch
 from torch import nn
 from torchvision.io import read_image,ImageReadMode
 import os
+import re
 
 
 '''
@@ -134,5 +135,32 @@ m = m.cuda()
 torch.save(m,"model/test_model")
 '''
 
-m = torch.load("model/test_model")
+#m = torch.load("model/test_model")
 # print(m)
+
+
+'''
+with open("test.txt","wt") as f:
+     paths = get_img_paths(IMAGE_PATH)
+     paths = map(lambda x:x+"\n",paths)
+     f.writelines(paths)
+'''
+'''
+a , alist = get_img_paths(IMAGE_PATH)
+for l in alist:
+    a = re.search(r'\d+',l[0]).group()
+    b = re.search(r'\d+',l[1]).group()
+    c = re.search(r'\d+',l[2]).group()
+    if a == b and b == c:
+        pass
+    else:
+         print("%s, %s, %s"%(l[0],l[1],l[2]))
+'''
+dataset = ThreeImageToTensorDataset(TRAFFIC_LIGHT_INT_PATH,IMAGE_PATH)
+dataloader = DataLoader(dataset, batch_size=1)
+with open("test.txt","w") as f:
+    for batch,(X,y) in enumerate(dataloader):
+        print(f"bacth:{batch}, X:{X.size()}, y:{y}" ,file=f)
+
+with open(TRAFFIC_LIGHT_INT_PATH,"rb") as f:
+    print(len(pickle.load(f)))
