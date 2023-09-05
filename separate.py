@@ -10,11 +10,18 @@ def separate_img(img_dir):
     os.makedirs(IMG_TEST_PATH, exist_ok=True)
     abs_img_dir = os.path.abspath(img_dir)
     img_path_list = [img_dir + "/" + p for p in sorted(os.listdir(abs_img_dir))]
+    front_path_list = [p for p in img_path_list if "front" in p]
+    left_path_list = [p for p in img_path_list if "left" in p]
+    right_path_list = [p for p in img_path_list if "right" in p]
     for img_num in range(len(img_path_list)):
         if img_num < TRAIN_NUM:
-            shutil.copy2(img_path_list[img_num],IMG_TRAIN_PATH)
+            shutil.copy2(front_path_list[img_num],IMG_TRAIN_PATH)
+            shutil.copy2(left_path_list[img_num],IMG_TRAIN_PATH)
+            shutil.copy2(right_path_list[img_num],IMG_TRAIN_PATH)
         elif img_num < TRAIN_NUM + TEST_NUM:
-            shutil.copy2(img_path_list[img_num], IMG_TEST_PATH)
+            shutil.copy2(front_path_list[img_num],IMG_TRAIN_PATH)
+            shutil.copy2(left_path_list[img_num],IMG_TRAIN_PATH)
+            shutil.copy2(right_path_list[img_num],IMG_TRAIN_PATH)
 
 def separate_label(annotation_file):
     with open(annotation_file,"rb") as f:
