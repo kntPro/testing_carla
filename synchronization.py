@@ -41,7 +41,7 @@ def sensor_callback(sensor_data, sensor_queue, sensor_name):
     # Do stuff with the sensor_data data like save it to disk
     # Then you just need to add to the queue
     sensor_queue.put((sensor_data.frame, sensor_name))
-    sensor_data.save_to_disk('_out_tick/%-s:%06d.png' % (sensor_name,sensor_data.frame))
+    sensor_data.save_to_disk('%s/%-s:%06d.png' % (IMAGE_PATH,sensor_name,sensor_data.frame))
 
 
 def main():
