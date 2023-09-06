@@ -9,6 +9,8 @@ from torch import nn
 from torchvision.io import read_image,ImageReadMode
 import os
 import re
+from torchvision.models import resnet18
+
 
 
 '''
@@ -156,6 +158,7 @@ for l in alist:
     else:
          print("%s, %s, %s"%(l[0],l[1],l[2]))
 '''
+'''
 dataset = ThreeImageToTensorDataset(TRAFFIC_LIGHT_INT_PATH,IMAGE_PATH)
 dataloader = DataLoader(dataset, batch_size=1)
 with open("test.txt","w") as f:
@@ -164,3 +167,27 @@ with open("test.txt","w") as f:
 
 with open(TRAFFIC_LIGHT_INT_PATH,"rb") as f:
     print(len(pickle.load(f)))
+'''
+
+def get_resnet(num_classes: int=2) -> nn.Module:
+   # ImageNetで事前学習済みの重みをロード
+    model = resnet18(weights='DEFAULT')
+
+   # ここで更新する部分の重みは初期化される
+    model.conv1 = nn.Conv2d(
+        in_channels=3*IMAGE_NUM,
+        out_channels=64,
+        kernel_size=model.conv1.kernel_size,
+        stride=model.conv1.stride,
+        padding=model.conv1.padding,
+        bias=False
+   )
+
+    model.fc = nn.Linear(
+        in_features=model.fc.in_features,
+        out_features=num_classes
+    )
+    print(type(model))
+    return model
+
+print(get_resnet())
