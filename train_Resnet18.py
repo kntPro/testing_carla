@@ -150,7 +150,7 @@ def get_resnet(num_classes: int=2) -> nn.Module:
 
    # ここで更新する部分の重みは初期化される
     model.conv1 = nn.Conv2d(
-        in_channels=3*IMAGE_NUM,
+        in_channels=3*3*IMAGE_NUM,
         out_channels=64,
         kernel_size=model.conv1.kernel_size,
         stride=model.conv1.stride,
@@ -162,7 +162,9 @@ def get_resnet(num_classes: int=2) -> nn.Module:
         in_features=model.fc.in_features,
         out_features=num_classes
     )
-    print(type(model))
+    
+    with open("model_architecture.txt","wt") as f:
+        print(type(model),file=f)
     return model
 
 
