@@ -9,6 +9,10 @@ from torch import nn
 from torchvision.io import read_image,ImageReadMode
 import os
 import re
+import carla
+import random
+import itertools
+from queue import Queue
 
 
 '''
@@ -156,6 +160,7 @@ for l in alist:
     else:
          print("%s, %s, %s"%(l[0],l[1],l[2]))
 '''
+'''
 dataset = ThreeImageToTensorDataset(TRAFFIC_LIGHT_INT_PATH,IMAGE_PATH)
 dataloader = DataLoader(dataset, batch_size=1)
 with open("test.txt","w") as f:
@@ -164,3 +169,68 @@ with open("test.txt","w") as f:
 
 with open(TRAFFIC_LIGHT_INT_PATH,"rb") as f:
     print(len(pickle.load(f)))
+'''
+def run_carla():
+    client = carla.Client('localhost', 2000)
+    client.set_timeout(2.0)
+    world = client.get_world()
+    world_map = world.get_map()
+    tm = client.get_trafficmanager(8000)
+
+    os.makedirs("./misc/junction/",exist_ok=True )
+    #f = open("waypoint_in_junction","wb")
+
+    try:
+        original_settings = world.get_settings()
+        settings = world.get_settings()
+
+        settings.fixed_delta_seconds = 0.017 
+        settings.synchronous_mode = True
+        world.apply_settings(settings)
+        tm.set_synchronous_mode(True)
+
+        blueprint_library = world.get_blueprint_library()
+
+        vehicle_bp = blueprint_library.find("vehicle.audi.tt")
+        if vehicle_bp.has_attribute('color'):
+            color = random.choice(vehicle_bp.get_attribute('color').recommended_values)
+            vehicle_bp.set_attribute('color',color)
+        vehicle_transform = random.choice(world_map.get_spawn_points())
+        vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
+        #tm.vehicle_percentage_speed_difference(vehicle, 100.)
+
+        sensor_queue = Queue()
+        camera_bp = blueprint_library.find('sensor.camera.rgb')
+        camera_transform = carla.Transform(carla.Location(x=2.0,z=2.0))
+        camera = world.spawn_actor(camera_bp,camera_transform, attach_to=vehicle)
+        camera.listen(lambda data:save_image(data))
+        def save_image(data):
+            data.save_to_disk('./misc/junction/%6d.png'%(data.frame))
+            sensor_queue.put(data.frame)
+
+        for i in itertools.count(0):
+            world.tick()
+            vehicle.set_autopilot(True)
+
+            try:
+                sensor_frame = sensor_queue.get(True, 1.0)
+                print("     Frame:%d"%(sensor_frame))
+            except Empty:
+                print("No picture exist")
+
+            if world_map.get_waypoint(vehicle.get_transform().location).is_junction:
+                print("detect junction")
+                break
+            
+
+    finally:
+        world.apply_settings(original_settings)
+        vehicle.destroy()
+        print("destroyed vehicle")
+        #f.close()
+        print("closed file")
+
+try:
+    run_carla()
+except KeyboardInterrupt:
+    print("Correctly End")

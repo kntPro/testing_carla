@@ -49,6 +49,7 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(2.0)
     world = client.get_world()
+    world_map = world.get_map()
     tm = client.get_trafficmanager(8000)
     f = open(TRAFFIC_LIGHT_INT_PATH,"wb")
     traffic_light_int = []
@@ -78,8 +79,8 @@ def main():
         if cam_bp.has_attribute('image_size_x') and cam_bp.has_attribute('image_size_y'):
             cam_bp.set_attribute('image_size_x',IMAGE_SIZE_X)
             cam_bp.set_attribute('image_size_y',IMAGE_SIZE_Y)
-        vehicle_bp = blueprint_library.find("vehicle.audi.tt")
 
+        vehicle_bp = blueprint_library.find("vehicle.audi.tt")
         if vehicle_bp.has_attribute('color'):
             color = random.choice(vehicle_bp.get_attribute('color').recommended_values)
             vehicle_bp.set_attribute('color',color)
@@ -114,7 +115,7 @@ def main():
         for _ in range(TICK_COUNT):
             # Tick the server
             world.tick()
-            vehicle.set_autopilot(True)
+            vehicle.set_autopilot(True) #tickの後じゃないとオートパイロットが動かない
             w_frame = world.get_snapshot().frame
             print("\nWorld's frame: %d" % w_frame)
 
@@ -123,6 +124,9 @@ def main():
             # until all the information is processed and we continue with the next frame.
             # We include a timeout of 1.0 s (in the get method) and if some information is
             # not received in this time we continue.
+            #for文ですべてのセンサーのデータをキューから取り出している
+            #一つでもセンサーのデータが欠けている場合、キューとリストの長さが合わなくなり（len(sensor_queue)<len(sensor_list))
+            #エラーが起きる
             try:
                 for __ in range(len(sensor_list)):
                     s_frame = sensor_queue.get(True, 1.0)
