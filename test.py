@@ -179,8 +179,9 @@ def get_img_paths(img_dir):
 get_img_paths(IMAGE_PATH)
 '''
 def check_dataset():
-    dataset = ThreeImageToTensorDataset(LABEL_PATH,IMG_TRAIN_PATH)
+    dataset = ThreeImageToTensorDataset(LABEL_TEST_PATH,IMG_TRAIN_PATH)
     dataloader = DataLoader(dataset, batch_size=1)
+    print(dataloader.__len__())
     with open("misc/dataset.txt","wt") as f:
         for batch,(X,y) in enumerate(dataloader):
             print(f"bacth:{batch}, X:{X.size()}, y:{y}" ,file=f)
@@ -281,7 +282,7 @@ def check_labels(label_path:str,log_file:str):
 #check_labels(LABEL_TEST_PATH,log_file="misc/testLabel")
 #check_labels(LABEL_TRAIN_PATH, log_file="misc/trainLabel")
 
-def check_labelDict_to_labelList():
+def is_equal_labelDict_to_labelList():
     label_dict = pickle.load(open(LABEL_PATH,"rb"))
     tr = pickle.load(open(LABEL_TRAIN_PATH,"rb"))
     te = pickle.load(open(LABEL_TEST_PATH,"rb"))
@@ -295,4 +296,18 @@ def check_labelDict_to_labelList():
     print(np.array_equal(label_dict["traffic_light"], list(label_list[:,0])))
     print(np.array_equal(label_dict["intsersection"], list(label_list[:,1])))
 
-check_dataset()
+def check_label_data():
+    np.set_printoptions(threshold=np.inf)
+    abs_train_path = os.path.abspath(LABEL_TRAIN_PATH)
+    abs_test_path = os.path.abspath(LABEL_TEST_PATH)
+    train_label=open(abs_train_path,"rb") 
+    test_label=open(abs_test_path,"rb")    
+    train = pickle.load(train_label)
+    test = pickle.load(test_label)
+    with open("misc/label.txt","wt") as f:
+        print(f"train.shape{train.shape}",file=f)
+        print(f"test.shape{test.shape}",file=f)
+    train_label.close()
+    test_label.close()    
+
+check_dataset() 

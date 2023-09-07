@@ -11,6 +11,7 @@ from config import *
 import pickle
 from separate import separate_label, separate_img
 from tqdm import tqdm
+import numpy as np
 
 device = (
     "cuda"
@@ -64,7 +65,7 @@ class ThreeImageToTensorDataset(Dataset):
         self.target_transform = target_transform
 
     def __len__(self):
-        return len(self.img_labels)-IMAGE_NUM
+        return len(self.img_labels[:,0])-IMAGE_NUM
     
     def __getitem__(self, idx):
         #image_path_tuple = tuple(read_image(self.img_paths[i], mode=ImageReadMode.RGB).to(torch.float32) for i in range(idx,idx+IMAGE_NUM))
@@ -73,8 +74,8 @@ class ThreeImageToTensorDataset(Dataset):
             for img in self.img_paths[i]:
                 img_list.append(read_image(img, mode=ImageReadMode.RGB).to(torch.float32))
         images = torch.concat(img_list)
-        label_set = set(torch.tensor(self.img_labels[i]) for i in range(idx,idx+IMAGE_NUM))
-        label = int(1 in label_set) #4フレーム中に一つでも１があったら（１フレームでも信号機が赤になっていたら）１になる
+        label_list = torch.tensor(np.array([self.img_labels[i] for i in range(idx,idx+IMAGE_NUM)]))
+        label = torch.max(label_list,dim=0).values #4フレーム中に一つでも１があったら（１フレームでも信号機が赤になっていたら）１になる
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
