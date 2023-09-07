@@ -2,6 +2,7 @@ import os
 import shutil
 from config import *
 import pickle
+import numpy as np
 
 ###指定したpath（img_dir）のファイルを名前順にdata/train,data/testの２つのフォルダに分割する
 ###数はTRAIN＿NUMとTEST_NUM
@@ -23,20 +24,41 @@ def separate_img(img_dir):
             shutil.copy2(left_path_list[img_num],IMG_TEST_PATH)
             shutil.copy2(right_path_list[img_num],IMG_TEST_PATH)
 
-def separate_label(annotation_file):
+def separate_label(annotation_file,train_path,test_path):
     with open(annotation_file,"rb") as f:
-        labels = pickle.load(f)
-    train_label_list = labels[:TRAIN_NUM]
-    test_label_list = labels[TRAIN_NUM:TRAIN_NUM + TEST_NUM]
-    with open(LABEL_TRAIN_PATH,"wb") as train_label_file:
-        pickle.dump(train_label_list,train_label_file)
-    with open(LABEL_TEST_PATH,"wb") as test_label_file:
-        pickle.dump(test_label_list,test_label_file)
+        labels = dict(pickle.load(f))
+
+    train_label_list = np.array([[]])
+    test_label_list = np.array([[]])
+    
+    #辞書に入っている配列を順番にリストにする
+    #出力は(n,1,len(key))の次元を持つ配列
+    '''
+    for i in range(TRAIN_NUM+TEST_NUM):
+        data = np.array([[labels[key][i] for key in labels.keys()]])
+        if i < TRAIN_NUM:
+            train_label_list = np.append(train_label_list,data,axis=0)
+        else :
+            test_label_list = np.append(test_label_list,data,axis=0)
+
+    with open(train_path,"wb") as train_file:
+        pickle.dump(train_label_list,train_file)
+    with open(test_path,"wb") as test_file:
+        pickle.dump(test_label_list,test_file)
+    '''
+    value_list = [labels[k] for k in labels.keys()]
+    label_list = list(map(lambda *x:x, *value_list))
+    with open(train_path,"wb") as train:
+        pickle.dump(np.array(label_list[:TRAIN_NUM]), train)
+    with open(test_path,"wb") as test:
+        pickle.dump(np.array(label_list[TRAIN_NUM:TRAIN_NUM+TEST_NUM]), test)
+
 
 
 def main():
+    os.makedirs(DATA_PATH, exist_ok=True)
     separate_img(IMAGE_PATH)
-    separate_label(TRAFFIC_LIGHT_INT_PATH)
+    separate_label(LABEL_PATH, LABEL_TRAIN_PATH,LABEL_TEST_PATH)
 
 if __name__ == "__main__":
     main()

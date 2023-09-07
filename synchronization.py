@@ -30,6 +30,7 @@ import pickle
 import carla
 from config import *
 import time
+import numpy as np
 
 
 
@@ -51,8 +52,11 @@ def main():
     world = client.get_world()
     world_map = world.get_map()
     tm = client.get_trafficmanager(8000)
-    f = open(TRAFFIC_LIGHT_INT_PATH,"wb")
-    traffic_light_int = []
+
+    os.makedirs(OUT_PATH, exist_ok=True)
+    os.makedirs(IMAGE_PATH, exist_ok=True)
+    label_file = open(LABEL_PATH,"wb")
+    label_dic = {"traffic_light":np.array([]),"intersection":np.array([])}
 
     try:
         # We need to save the settings to be able to recover them at the end
@@ -85,7 +89,7 @@ def main():
             color = random.choice(vehicle_bp.get_attribute('color').recommended_values)
             vehicle_bp.set_attribute('color',color)
 
-        vehicle_transform = random.choice(world.get_map().get_spawn_points()) 
+        vehicle_transform = random.choice(world_map.get_spawn_points()) 
         vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
         tm.vehicle_percentage_speed_difference(vehicle, -300.)
 
@@ -132,12 +136,16 @@ def main():
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
                 print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
-                traffic_light_int.append(int(vehicle.is_at_traffic_light()))   
+                label_dic["traffic_light"] = np.append(label_dic["traffic_light"],int(vehicle.is_at_traffic_light()))   
+                label_dic["intersection"] = np.append(label_dic["intersection"],int(world_map.get_waypoint(vehicle.get_transform().location).is_junction))
             except Empty:
                 print("    Some of the sensor information is missed")
         
-        pickle.dump(traffic_light_int,f) 
+        pickle.dump(label_dic, label_file) 
+
         time.sleep(10)    #最後に保存する画像が欠けないように
+        for sensor in sensor_list:
+            sensor.stop()
     
 
     finally:
@@ -147,7 +155,7 @@ def main():
             print(f"destroyed {sensor.id}")
         vehicle.destroy()
         print("destroyed vehicle")
-        f.close()
+        label_file.close()
         print("closed file")
 
 
