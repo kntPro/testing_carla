@@ -108,12 +108,15 @@ def train(dataloader, model, loss_fn, optimizer, on_write:bool=False):
     model.train()
     writer = SummaryWriter()
     for batch, (X, y) in enumerate(tqdm(dataloader)):
-        X = X.to(device)
-        y = y.to(device)
-
         # Compute prediction error
-        pred = model(X)
-        loss = loss_fn(pred, y)
+        y0 = y[:,0].to(device)
+        y1 = y[:,1].to(device)
+        X.to(device)
+        pred0, pred1 = model(X)
+
+        loss0 = loss_fn(pred0, y0)
+        loss1 = loss_fn(pred1, y1)
+        loss = loss0+loss1
         if(on_write):
             writer.add_scalar("loss", loss, batch)
 
@@ -126,7 +129,8 @@ def train(dataloader, model, loss_fn, optimizer, on_write:bool=False):
             loss, current = loss.item(), (batch + 1) * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     
-    writer.close()
+    if(on_write):
+        writer.close()
 
 
 def test(dataloader, model, loss_fn):
@@ -136,16 +140,21 @@ def test(dataloader, model, loss_fn):
     test_loss, correct = 0, 0
     with torch.no_grad():
         for X, y in dataloader:
-            X, y = X.to(device), y.to(device)
-            pred = model(X)
-            test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+            X = X.to(device)
+            y0 = y[:,0].to(device)
+            y1 = y[:,1].to(device)
+            pred0, pred1 = model(X)
+            loss0 = loss_fn(pred0, y0)
+            loss1 = loss_fn(pred1, y1)
+            loss = loss0+loss1
+            test_loss += loss.item()
+            correct += (pred0.argmax(1) == y0).type(torch.float).sum().item() + (pred1.argmax(1) == y1).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
-
-def get_resnet(num_classes: int=2) -> nn.Module:
+'''
+def get_resnet(num_classes: int=4) -> nn.Module:
    # ImageNetで事前学習済みの重みをロード
     model = resnet18(weights='DEFAULT')
 
@@ -159,7 +168,7 @@ def get_resnet(num_classes: int=2) -> nn.Module:
         bias=False
    )
 
-    model.fc = nn.Linear(
+    model.fc = nn.S(
         in_features=model.fc.in_features,
         out_features=num_classes
     )
@@ -167,11 +176,47 @@ def get_resnet(num_classes: int=2) -> nn.Module:
     with open("model_architecture.txt","wt") as f:
         print(type(model),file=f)
     return model
+'''
+def get_resnet(num_classes: int=4) -> nn.Module:
+   # ImageNetで事前学習済みの重みをロード
+    model = resnet18(weights='DEFAULT')
+
+    class outLayer(nn.Module):
+        def __init__(self, in_units):
+            super(outLayer,self).__init__()
+            self.l1 = nn.Linear(in_units,32)
+            self.out1 = nn.Linear(32,2)
+            self.out2 = nn.Linear(32,2)
+
+        def forward(self,x):
+            h = nn.functional.relu(self.l1(x))
+            out1 = nn.functional.relu(self.out1(h))
+            out2 = nn.functional.relu(self.out2(h))
+
+            return out1,out2
+
+   # ここで更新する部分の重みは初期化される
+    model.conv1 = nn.Conv2d(
+        in_channels=3*3*IMAGE_NUM,
+        out_channels=64,
+        kernel_size=model.conv1.kernel_size,
+        stride=model.conv1.stride,
+        padding=model.conv1.padding,
+        bias=False
+   )
+
+    out_layer = outLayer(in_units=1000)  #model.fcの出力数
+    model.fc = nn.Sequential(
+        model.fc,
+        out_layer
+    )
+    
+    return model
 
 
 def main():
-    train_dataset = TensorImageDataset(LABEL_TRAIN_PATH,IMG_TRAIN_PATH)
-    test_dataset = TensorImageDataset(LABEL_TEST_PATH,IMG_TEST_PATH)
+    train_dataset = ThreeImageToTensorDataset(LABEL_TRAIN_PATH,IMG_TRAIN_PATH)
+    test_dataset = ThreeImageToTensorDataset(LABEL_TEST_PATH,IMG_TEST_PATH)
     train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 

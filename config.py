@@ -16,5 +16,5 @@ TEST_NUM = int(2e2)
 TICK_COUNT = TRAIN_NUM + TEST_NUM 
 
 IMAGE_NUM = 4 #モデルが一度に読み込む画像の枚数
-BATCH_SIZE = 16
-EPOCH = 1 
+BATCH_SIZE = 32
+EPOCH = 1

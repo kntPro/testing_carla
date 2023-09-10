@@ -28,26 +28,11 @@ def separate_label(annotation_file,train_path,test_path):
     with open(annotation_file,"rb") as f:
         labels = dict(pickle.load(f))
 
-    train_label_list = np.array([[]])
-    test_label_list = np.array([[]])
-    
     #辞書に入っている配列を順番にリストにする
     #出力は(n,1,len(key))の次元を持つ配列
-    '''
-    for i in range(TRAIN_NUM+TEST_NUM):
-        data = np.array([[labels[key][i] for key in labels.keys()]])
-        if i < TRAIN_NUM:
-            train_label_list = np.append(train_label_list,data,axis=0)
-        else :
-            test_label_list = np.append(test_label_list,data,axis=0)
 
-    with open(train_path,"wb") as train_file:
-        pickle.dump(train_label_list,train_file)
-    with open(test_path,"wb") as test_file:
-        pickle.dump(test_label_list,test_file)
-    '''
     value_list = [labels[k] for k in labels.keys()]
-    label_list = list(map(lambda *x:x, *value_list))
+    label_list = list(map(lambda *x:list(x), *value_list))
     with open(train_path,"wb") as train:
         pickle.dump(np.array(label_list[:TRAIN_NUM]), train)
     with open(test_path,"wb") as test:

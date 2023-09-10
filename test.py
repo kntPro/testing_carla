@@ -1,11 +1,11 @@
 import pickle
 from config import *
-from train_Resnet18 import TensorImageDataset,ThreeImageToTensorDataset
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
-from train_Resnet18 import get_resnet
+from torchvision.models import resnet18
 import torch
 from torch import nn
+from torch.functional import F
 from torchvision.io import read_image,ImageReadMode
 import os
 import re
@@ -14,8 +14,16 @@ import random
 import itertools
 from queue import Queue
 import numpy as np
+import timeit
+from train_Resnet18 import ThreeImageToTensorDataset
 
-
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)  
 '''
 f = open(TRAFFIC_LIGHT_INT,"rb")
 print(pickle.load(f))
@@ -178,17 +186,6 @@ def get_img_paths(img_dir):
     print("end")
 get_img_paths(IMAGE_PATH)
 '''
-def check_dataset():
-    dataset = ThreeImageToTensorDataset(LABEL_TEST_PATH,IMG_TRAIN_PATH)
-    dataloader = DataLoader(dataset, batch_size=1)
-    print(dataloader.__len__())
-    with open("misc/dataset.txt","wt") as f:
-        for batch,(X,y) in enumerate(dataloader):
-            print(f"bacth:{batch}, X:{X.size()}, y:{y}" ,file=f)
-
-    with open(LABEL_PATH,"rb") as f:
-        print(len(pickle.load(f)))
-
 '''
 def run_carla():
     client = carla.Client('localhost', 2000)
@@ -269,6 +266,19 @@ right_path = [f for f in img_paths if "right" in f]
 print(f"left:{len(left_path)}, front:{len(front_path)}, right:{len(right_path)}")
 '''
 
+def check_dataset():
+    os.makedirs("misc",exist_ok=True)
+    dataset = ThreeImageToTensorDataset(LABEL_TEST_PATH,IMG_TEST_PATH)
+    dataloader = DataLoader(dataset, batch_size=1)
+    print(dataloader.__len__())
+    with open("misc/dataset.txt","wt") as f:
+        for batch,(X,y) in enumerate(dataloader):
+            print(f"bacth:{batch}, X:{X.size()}, y:{y}" ,file=f)
+
+    with open(LABEL_PATH,"rb") as f:
+        print(len(pickle.load(f)))
+
+
 
 def check_labels(label_path:str,log_file:str):
     np.set_printoptions(threshold=np.inf)
@@ -310,4 +320,88 @@ def check_label_data():
     train_label.close()
     test_label.close()    
 
-check_dataset() 
+#carlaから拾集した画像の枚数を調べる
+def check_image_num():
+    image_list = os.listdir(IMAGE_PATH)
+    front_list = [f for f in image_list if 'front' in f]
+    left_list = [f for f in image_list if 'left' in f]
+    right_list = [f for f in image_list if 'right' in f]
+    
+    print("all:",len(image_list))
+    print('front:',len(front_list))
+    print('left:',len(left_list))
+    print('right:',len(right_list))
+
+def print_model_architecture(model:nn.Module):
+    with open('misc/model_architecture.txt','wt') as f:
+        print(model,file=f)
+
+def check_out_resnet18(model:nn.Module):
+    input = torch.randint(low=0,high=1,size=(4,3,288,288),dtype=torch.float32)
+    out = model(input)
+    print(out)
+    for o in out:
+        print(o.size())
+
+def get_resnet(num_classes: int=4) -> nn.Module:
+   # ImageNetで事前学習済みの重みをロード
+    model = resnet18(weights='DEFAULT')
+
+    class outLayer(nn.Module):
+        def __init__(self, in_units):
+            super(outLayer,self).__init__()
+            self.l1 = nn.Linear(in_units,32)
+            self.out1 = nn.Linear(32,2)
+            self.out2 = nn.Linear(32,2)
+
+        def forward(self,x):
+            h = F.relu(self.l1(x))
+            out1 = F.relu(self.out1(h))
+            out2 = F.relu(self.out2(h))
+
+            return out1,out2
+
+   # ここで更新する部分の重みは初期化される
+    model.conv1 = nn.Conv2d(
+        in_channels=3,
+        out_channels=64,
+        kernel_size=model.conv1.kernel_size,
+        stride=model.conv1.stride,
+        padding=model.conv1.padding,
+        bias=False
+   )
+
+    out_layer = outLayer(in_units=1000)  #model.fcの出力数
+    model.fc = nn.Sequential(
+        model.fc,
+        out_layer
+    )
+    
+    return model
+
+def check_train(model, loss_fn, optimizer, on_write:bool=False):
+    model.train()
+    x = torch.randint(low=0,high=1,size=(4,3,288,288),dtype=torch.float32)
+    y = torch.randint(low=0,high=1,size=(4,2), dtype=torch.uint8)
+
+    # Compute prediction error
+    pred1, pred2 = model(x)
+    loss1 = loss_fn(pred1, y[:,0])
+    loss2 = loss_fn(pred2, y[:,1])
+    loss = loss1+loss2
+
+    # Backpropagation
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+
+    loss= loss.item()
+    print(f"loss: {loss:>7f}")
+
+def try_train():
+    model = get_resnet()
+    loss = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(params=model.parameters())
+    check_train(model,loss_fn=loss,optimizer=optimizer)
+    
+check_dataset()
