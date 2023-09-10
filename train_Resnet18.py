@@ -111,7 +111,7 @@ def train(dataloader, model, loss_fn, optimizer, on_write:bool=False):
         # Compute prediction error
         y0 = y[:,0].to(device)
         y1 = y[:,1].to(device)
-        X.to(device)
+        X = X.to(device)
         pred0, pred1 = model(X)
 
         loss0 = loss_fn(pred0, y0)
