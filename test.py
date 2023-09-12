@@ -15,7 +15,9 @@ import itertools
 from queue import Queue
 import numpy as np
 import timeit
-from train_Resnet18 import ThreeImageToTensorDataset
+from train_Resnet18 import ThreeImageToTensorDataset, get_resnet
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
 device = (
     "cuda"
@@ -337,47 +339,12 @@ def print_model_architecture(model:nn.Module):
         print(model,file=f)
 
 def check_out_resnet18(model:nn.Module):
-    input = torch.randint(low=0,high=1,size=(4,3,288,288),dtype=torch.float32)
+    input = torch.randint(low=0,high=1,size=(4,36,288,288),dtype=torch.float32)
     out = model(input)
     print(out)
     for o in out:
         print(o.size())
 
-def get_resnet(num_classes: int=4) -> nn.Module:
-   # ImageNetで事前学習済みの重みをロード
-    model = resnet18(weights='DEFAULT')
-
-    class outLayer(nn.Module):
-        def __init__(self, in_units):
-            super(outLayer,self).__init__()
-            self.l1 = nn.Linear(in_units,32)
-            self.out1 = nn.Linear(32,2)
-            self.out2 = nn.Linear(32,2)
-
-        def forward(self,x):
-            h = F.relu(self.l1(x))
-            out1 = F.relu(self.out1(h))
-            out2 = F.relu(self.out2(h))
-
-            return out1,out2
-
-   # ここで更新する部分の重みは初期化される
-    model.conv1 = nn.Conv2d(
-        in_channels=3,
-        out_channels=64,
-        kernel_size=model.conv1.kernel_size,
-        stride=model.conv1.stride,
-        padding=model.conv1.padding,
-        bias=False
-   )
-
-    out_layer = outLayer(in_units=1000)  #model.fcの出力数
-    model.fc = nn.Sequential(
-        model.fc,
-        out_layer
-    )
-    
-    return model
 
 def check_train(model, loss_fn, optimizer, on_write:bool=False):
     model.train()
@@ -404,4 +371,24 @@ def try_train():
     optimizer = torch.optim.Adam(params=model.parameters())
     check_train(model,loss_fn=loss,optimizer=optimizer)
     
-check_dataset()
+def test_model():
+    model = nn.Sequential(
+        nn.Linear(2,32),
+        nn.ReLU(),
+        nn.Linear(32,2),
+        nn.Sigmoid()
+    )
+
+    input = torch.randint(low=0,high=100,size=(4,2)).to(dtype=torch.float32)
+    out = model(input)
+    print(input)
+    print(model)
+    print(out)
+
+def test_summaary_writer():
+    writer = SummaryWriter(log_dir="misc/"+datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
+    writer.add_graph(model=get_resnet(),input_to_model=torch.rand(size=(1,36,int(IMAGE_SIZE_X),int(IMAGE_SIZE_Y))))
+    writer.add_scalar("test",np.array([1,2,3,4]),np.array([1,2,3,4]))
+    writer.close()
+
+test_summaary_writer()
