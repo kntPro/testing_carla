@@ -12,6 +12,7 @@ import pickle
 from separate import separate_label, separate_img
 from tqdm import tqdm
 import numpy as np
+from datetime import datetime
 
 device = (
     "cuda"
@@ -75,7 +76,7 @@ class ThreeImageToTensorDataset(Dataset):
                 img_list.append(read_image(img, mode=ImageReadMode.RGB).to(torch.float32))
         images = torch.concat(img_list)
         label_list = torch.tensor(np.array([self.img_labels[i] for i in range(idx,idx+IMAGE_NUM)]))
-        label = torch.max(label_list,dim=0).values #4フレーム中に一つでも１があったら（１フレームでも信号機が赤になっていたら）１になる
+        label = torch.max(label_list,dim=0).values.to(torch.float32) #4フレーム中に一つでも１があったら（１フレームでも信号機が赤になっていたら）１になる
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
@@ -102,15 +103,15 @@ class ThreeImageToTensorDataset(Dataset):
             l = pickle.load(label)
         return l
 
-
+'''
 def train(dataloader, model, loss_fn, optimizer, on_write:bool=False):
     size = len(dataloader.dataset)
     model.train()
     writer = SummaryWriter()
     for batch, (X, y) in enumerate(tqdm(dataloader)):
         # Compute prediction error
-        y0 = y[:,0].to(device)
-        y1 = y[:,1].to(device)
+        y0 = y[:,0].to(device=device, dtype=torch.int32)
+        y1 = y[:,1].to(device=device, dtype=torch.int32)
         X = X.to(device)
         pred0, pred1 = model(X)
 
@@ -154,6 +155,8 @@ def test(dataloader, model, loss_fn):
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
 '''
+
+'''
 def get_resnet(num_classes: int=4) -> nn.Module:
    # ImageNetで事前学習済みの重みをロード
     model = resnet18(weights='DEFAULT')
@@ -177,16 +180,15 @@ def get_resnet(num_classes: int=4) -> nn.Module:
         print(type(model),file=f)
     return model
 '''
-def get_resnet(num_classes: int=4) -> nn.Module:
-   # ImageNetで事前学習済みの重みをロード
-    model = resnet18(weights='DEFAULT')
+def get_resnet(num_label: int=2) -> nn.Module:
+    model = resnet18()
 
     class outLayer(nn.Module):
         def __init__(self, in_units):
             super(outLayer,self).__init__()
             self.l1 = nn.Linear(in_units,32)
-            self.out1 = nn.Linear(32,2)
-            self.out2 = nn.Linear(32,2)
+            self.out1 = nn.Linear(32,1)
+            self.out2 = nn.Linear(32,1)
 
         def forward(self,x):
             h = nn.functional.relu(self.l1(x))
@@ -205,13 +207,60 @@ def get_resnet(num_classes: int=4) -> nn.Module:
         bias=False
    )
 
-    out_layer = outLayer(in_units=1000)  #model.fcの出力数
+    #out_layer = outLayer(in_units=1000)  #model.fcの出力数
     model.fc = nn.Sequential(
-        model.fc,
-        out_layer
+        nn.Linear(in_features=512,out_features=num_label),
+        nn.Sigmoid()
     )
     
     return model
+
+def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
+    size = len(dataloader.dataset)
+    model.train()
+    if(on_write):
+        day = datetime.now().strftime("%Y-%m-%d/%H:%M:%S")
+        writer = SummaryWriter(log_dir="runs/"+day)
+
+    for batch, (X, y) in enumerate(tqdm(dataloader)):
+        # Compute prediction error
+        X = X.to(device)
+        y = y.to(device)
+        pred = model(X)
+        loss = loss_fn(pred,y)
+
+        if(writer):
+            writer.add_scalar("loss",loss,batch)
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 100 == 0:
+            loss, current = loss.item(), (batch + 1) * len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+    
+    if(writer):
+        writer.close()
+
+def test(dataloader, model, loss_fn):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    model.eval()
+    test_loss, tl_correct, is_correct = 0, 0, 0
+    with torch.no_grad():
+        for X, y in dataloader:
+            X = X.to(device)
+            y = y.to(device)
+            pred = model(X)
+            loss = loss_fn(pred, y)
+            test_loss += loss.item()
+            tl_correct += (torch.round(pred[:,0]).type(torch.int64) == y[:,0]).type(torch.float).sum().item()
+            is_correct += (torch.round(pred[:,1]).type(torch.int64) == y[:,1]).type(torch.float).sum().item()
+            test_loss /= num_batches
+    tl_correct /= size
+    is_correct /= size
+    print(f"Test Error: \n TrafficLight Accuracy: {(100*tl_correct):>0.1f}%,  Intersection Accuracy: {(100*is_correct):>0.1f}% \nAvg loss: {test_loss:>8f} \n")
 
 
 def main():
@@ -221,15 +270,15 @@ def main():
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
     model = get_resnet().to(device)
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.functional.binary_cross_entropy
     optimizer = torch.optim.Adam(model.parameters())
     
     for t in tqdm(range(EPOCH)):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(train_dataloader, model, loss_fn, optimizer, on_write=True)
+        train(train_dataloader, model, loss_fn, optimizer, epoch=t, on_write=True)
         test(test_dataloader, model, loss_fn)
 
-    torch.save(model.state_dict(),"model/trained_resnet18")
+    torch.save(model.state_dict(),"model/trained_resnet18_3cam")
     print("Done!")
     
 
