@@ -33,6 +33,8 @@ def separate_label(annotation_file,train_path,test_path):
 
     value_list = [labels[k] for k in labels.keys()]
     label_list = list(map(lambda *x:list(x), *value_list))
+    #[[1,3,5,7,9],[0,2,4,6,8]] -> [[1, 0], [3, 2], [5, 4], [7, 6], [9, 8]] (転置)
+
     with open(train_path,"wb") as train:
         pickle.dump(np.array(label_list[:TRAIN_NUM]), train)
     with open(test_path,"wb") as test:
