@@ -11,10 +11,10 @@ IMG_TEST_PATH = DATA_PATH + "test/"
 IMAGE_SIZE_X = '288'
 IMAGE_SIZE_Y = '288'
 
-TRAIN_NUM = int(8e2)
-TEST_NUM = int(2e2)
+TRAIN_NUM = int(8e3)
+TEST_NUM = int(2e3)
 TICK_COUNT = TRAIN_NUM + TEST_NUM 
 
 IMAGE_NUM = 4 #モデルが一度に読み込む画像の枚数
 BATCH_SIZE = 32
-EPOCH = 1
+EPOCH = 20
