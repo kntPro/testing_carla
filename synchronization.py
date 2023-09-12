@@ -135,9 +135,12 @@ def main():
                 for __ in range(len(sensor_list)):
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
-                print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
-                label_dic["traffic_light"] = np.append(label_dic["traffic_light"],int(vehicle.is_at_traffic_light()))   
-                label_dic["intersection"] = np.append(label_dic["intersection"],int(world_map.get_waypoint(vehicle.get_transform().location).is_junction))
+                tl_int = int(vehicle.is_at_traffic_light())
+                is_int = int(world_map.get_waypoint(vehicle.get_transform().location).is_junction)
+                print("vehicle.is_at_traffic_light():    ",tl_int)
+                print("insetsection:    ",is_int)
+                label_dic["traffic_light"] = np.append(label_dic["traffic_light"],tl_int)   
+                label_dic["intersection"] = np.append(label_dic["intersection"],is_int)
             except Empty:
                 print("    Some of the sensor information is missed")
         
