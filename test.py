@@ -446,5 +446,3 @@ def test_tensorboard():
                         i+1)
 
     writer.close()
-
-test_tensorboard()
