@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from torchvision.models import resnet18, ResNet18_Weights
 import torchvision.transforms as transforms 
-from torchvision.io import read_image, write_png
 from torchvision.io import ImageReadMode
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
@@ -14,6 +13,7 @@ from tqdm import tqdm
 import numpy as np
 import time
 from datetime import datetime
+from PIL import Image
 
 device = (
     "cuda"
@@ -24,38 +24,6 @@ device = (
 )  
 
 #separate.py
-class TensorImageDataset(Dataset):
-    #label_fileは"/data内のtestかtrainのパス、img_dirは画像があるフォルダのパスにする
-    def __init__(self, label_file, img_dir, transform=None, target_transform=None) -> None:
-        self.img_labels = self._open_label_data(label_file) 
-        self.img_paths = self._get_img_paths(img_dir)
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __len__(self):
-        return len(self.img_labels)-IMAGE_NUM
-    
-    def __getitem__(self, idx):
-        image_path_tuple = tuple(read_image(self.img_paths[i], mode=ImageReadMode.RGB).to(torch.float32) for i in range(idx,idx+IMAGE_NUM))
-        image = torch.concat(image_path_tuple)
-        label_set = set(torch.tensor(self.img_labels[i]) for i in range(idx,idx+IMAGE_NUM))
-        label = int(1 in label_set)
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
-        return image, label
-    
-    def _get_img_paths(self, img_dir):
-        img_dir = os.path.abspath(img_dir)
-        img_paths = [img_dir+"/"+p for p in sorted(os.listdir(img_dir)) if os.path.splitext(p)[1] in [".jpg", ".jpeg", ".png", ".bmp"]]
-        return img_paths
-    
-    def _open_label_data(self,label_file):
-        abs_label_path = os.path.abspath(label_file)
-        with open(abs_label_path,"rb") as label:
-            l = pickle.load(label)
-        return l
 
 #front,left,rightの3方向のカメラ画像をDatasetにするクラス
 class ThreeImageToTensorDataset(Dataset):
@@ -63,7 +31,7 @@ class ThreeImageToTensorDataset(Dataset):
     def __init__(self, label_file, img_dir, transform=ResNet18_Weights.IMAGENET1K_V1.transforms, target_transform=None) -> None:
         self.img_labels = self._open_label_data(label_file) 
         self.img_paths = self._get_img_paths(img_dir)
-        self.transform = transform
+        self.transform = transform()
         self.target_transform = target_transform
 
     def __len__(self):
@@ -74,14 +42,11 @@ class ThreeImageToTensorDataset(Dataset):
         img_list = []
         for i in range(idx, idx+IMAGE_NUM):
             for img in self.img_paths[i]:
-                img_list.append(read_image(img, mode=ImageReadMode.RGB).to(torch.float32))
+                img_transformed = self.transform(Image.open(img).convert("RGB"))
+                img_list.append(img_transformed)
         images = torch.concat(img_list)
         label_list = torch.tensor(np.array([self.img_labels[i] for i in range(idx,idx+IMAGE_NUM)]))
         label = torch.max(label_list,dim=0).values.to(torch.float32) #4フレーム中に一つでも１があったら（１フレームでも信号機が赤になっていたら）１になる
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
         return images, label
     
     def _get_img_paths(self, img_dir):
@@ -140,14 +105,9 @@ def get_resnet(num_label: int=2) -> nn.Module:
     
     return model
 
-def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
+def train(dataloader, model, loss_fn, optimizer, epoch, writer ):
     size = len(dataloader.dataset)
     model.train()
-    bool_write = (on_write and (epoch+1)%5==0)
-    if bool_write:
-        day = datetime.now().strftime(f"%Y-%m-%d/%H:%M:%S_epoch:{epoch+1}")
-        writer = SummaryWriter(log_dir="runs/"+day)
-
     for batch, (X, y) in enumerate(tqdm(dataloader)):
         # Compute prediction error
         X = X.to(device)
@@ -155,8 +115,8 @@ def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
         pred = model(X)
         loss = loss_fn(pred,y)
 
-        if(bool_write):
-            writer.add_scalar("loss",loss,batch)
+        if writer and (epoch+1)%5==0:
+            writer.add_scalars("Loss",{f"{epoch+1}":loss},batch)
         # Backpropagation
         loss.backward()
         optimizer.step()
@@ -166,8 +126,6 @@ def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
     loss, current = loss.item(), (batch + 1) * len(X)
     print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     
-    if(bool_write):
-        writer.close()
 
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
@@ -200,15 +158,17 @@ def main():
     loss_fn = nn.functional.binary_cross_entropy
     optimizer = torch.optim.Adam(model.parameters())
     
-    log = open("log.txt","wt")
+    day = datetime.now().strftime(f"%Y-%m-%d/%H:%M:%S")
+    writer = SummaryWriter(log_dir="runs/"+day)
 
     for t in tqdm(range(EPOCH)):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(train_dataloader, model, loss_fn, optimizer, epoch=t, on_write=True)
+        train(train_dataloader, model, loss_fn, optimizer, epoch=t, writer=writer)
         test(test_dataloader, model, loss_fn)
 
     torch.save(model.state_dict(),"model/trained_resnet18_3cam")
     print("Done!")
+    writer.close()
     
 
 
