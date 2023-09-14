@@ -2,11 +2,12 @@ import pickle
 from config import *
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 import torch
 from torch import nn
 from torch.functional import F
 from torchvision.io import read_image,ImageReadMode
+import torchvision
 import os
 import re
 import carla
@@ -388,7 +389,23 @@ def test_model():
 def test_summaary_writer():
     writer = SummaryWriter(log_dir="misc/"+datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
     writer.add_graph(model=get_resnet(),input_to_model=torch.rand(size=(1,36,int(IMAGE_SIZE_X),int(IMAGE_SIZE_Y))))
-    writer.add_scalar("test",np.array([1,2,3,4]),np.array([1,2,3,4]))
     writer.close()
 
-test_summaary_writer()
+def out_label_to_np_label():  #carlaで収集したラベルと、そこからnp.ndarrayに変換したラベルが一致しているか確かめる
+    files = []
+    files.append(open(LABEL_TRAIN_PATH,"rb"))
+    files.append(open(LABEL_TEST_PATH,"rb"))
+    files.append(open(LABEL_PATH,"rb"))
+    
+    label = pickle.load(files[2])
+    test_label = pickle.load(files[1])
+    train_label = pickle.load(files[0])
+    np_label = np.concatenate((train_label,test_label))
+    
+    print("traffic:",np.array_equal(label["traffic_light"],np_label[:,0]))
+    print("intersection:",np.array_equal(label["intersection"],np_label[:,1]))
+
+    for i in files: i.close()
+
+print(ResNet18_Weights.IMAGENET1K_V1.transforms())
+print(dir(torchvision.transforms._presets))
