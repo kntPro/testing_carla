@@ -30,6 +30,7 @@ import pickle
 import carla
 from config import *
 import time
+import numpy as np
 
 
 
@@ -49,9 +50,13 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(2.0)
     world = client.get_world()
+    world_map = world.get_map()
     tm = client.get_trafficmanager(8000)
-    f = open(TRAFFIC_LIGHT_INT_PATH,"wb")
-    traffic_light_int = []
+
+    os.makedirs(OUT_PATH, exist_ok=True)
+    os.makedirs(IMAGE_PATH, exist_ok=True)
+    label_file = open(LABEL_PATH,"wb")
+    label_dic = {"traffic_light":np.array([]),"intersection":np.array([])}
 
     try:
         # We need to save the settings to be able to recover them at the end
@@ -78,13 +83,13 @@ def main():
         if cam_bp.has_attribute('image_size_x') and cam_bp.has_attribute('image_size_y'):
             cam_bp.set_attribute('image_size_x',IMAGE_SIZE_X)
             cam_bp.set_attribute('image_size_y',IMAGE_SIZE_Y)
-        vehicle_bp = blueprint_library.find("vehicle.audi.tt")
 
+        vehicle_bp = blueprint_library.find("vehicle.audi.tt")
         if vehicle_bp.has_attribute('color'):
             color = random.choice(vehicle_bp.get_attribute('color').recommended_values)
             vehicle_bp.set_attribute('color',color)
 
-        vehicle_transform = random.choice(world.get_map().get_spawn_points()) 
+        vehicle_transform = random.choice(world_map.get_spawn_points()) 
         vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
         tm.vehicle_percentage_speed_difference(vehicle, -300.)
 
@@ -114,7 +119,7 @@ def main():
         for _ in range(TICK_COUNT):
             # Tick the server
             world.tick()
-            vehicle.set_autopilot(True)
+            vehicle.set_autopilot(True) #tickの後じゃないとオートパイロットが動かない
             w_frame = world.get_snapshot().frame
             print("\nWorld's frame: %d" % w_frame)
 
@@ -123,17 +128,27 @@ def main():
             # until all the information is processed and we continue with the next frame.
             # We include a timeout of 1.0 s (in the get method) and if some information is
             # not received in this time we continue.
+            #for文ですべてのセンサーのデータをキューから取り出している
+            #一つでもセンサーのデータが欠けている場合、キューとリストの長さが合わなくなり（len(sensor_queue)<len(sensor_list))
+            #エラーが起きる
             try:
                 for __ in range(len(sensor_list)):
                     s_frame = sensor_queue.get(True, 1.0)
                     print("    Frame: %d   Sensor: %s" % (s_frame[0], s_frame[1]))
-                print(f"vehicle.is_at_traffic_light():   {vehicle.is_at_traffic_light()}")
-                traffic_light_int.append(int(vehicle.is_at_traffic_light()))   
+                tl_int = int(vehicle.is_at_traffic_light())
+                is_int = int(world_map.get_waypoint(vehicle.get_transform().location).is_junction)
+                print("vehicle.is_at_traffic_light():    ",tl_int)
+                print("insetsection:    ",is_int)
+                label_dic["traffic_light"] = np.append(label_dic["traffic_light"],tl_int)   
+                label_dic["intersection"] = np.append(label_dic["intersection"],is_int)
             except Empty:
                 print("    Some of the sensor information is missed")
         
-        pickle.dump(traffic_light_int,f) 
+        pickle.dump(label_dic, label_file) 
+
         time.sleep(10)    #最後に保存する画像が欠けないように
+        for sensor in sensor_list:
+            sensor.stop()
     
 
     finally:
@@ -143,7 +158,7 @@ def main():
             print(f"destroyed {sensor.id}")
         vehicle.destroy()
         print("destroyed vehicle")
-        f.close()
+        label_file.close()
         print("closed file")
 
 
