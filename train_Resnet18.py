@@ -1,6 +1,6 @@
 import torch 
 from torch import nn
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 import torchvision.transforms as transforms 
 from torchvision.io import read_image, write_png
 from torchvision.io import ImageReadMode
@@ -60,7 +60,7 @@ class TensorImageDataset(Dataset):
 #front,left,rightの3方向のカメラ画像をDatasetにするクラス
 class ThreeImageToTensorDataset(Dataset):
     #label_fileは"/data内のtestかtrainのパス、img_dirは画像があるフォルダのパスにする
-    def __init__(self, label_file, img_dir, transform=None, target_transform=None) -> None:
+    def __init__(self, label_file, img_dir, transform=ResNet18_Weights.IMAGENET1K_V1.transforms, target_transform=None) -> None:
         self.img_labels = self._open_label_data(label_file) 
         self.img_paths = self._get_img_paths(img_dir)
         self.transform = transform
@@ -104,85 +104,9 @@ class ThreeImageToTensorDataset(Dataset):
             l = pickle.load(label)
         return l
 
-'''
-def train(dataloader, model, loss_fn, optimizer, on_write:bool=False):
-    size = len(dataloader.dataset)
-    model.train()
-    writer = SummaryWriter()
-    for batch, (X, y) in enumerate(tqdm(dataloader)):
-        # Compute prediction error
-        y0 = y[:,0].to(device=device, dtype=torch.int32)
-        y1 = y[:,1].to(device=device, dtype=torch.int32)
-        X = X.to(device)
-        pred0, pred1 = model(X)
 
-        loss0 = loss_fn(pred0, y0)
-        loss1 = loss_fn(pred1, y1)
-        loss = loss0+loss1
-        if(on_write):
-            writer.add_scalar("loss", loss, batch)
-
-        # Backpropagation
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        if batch % 100 == 0:
-            loss, current = loss.item(), (batch + 1) * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-    
-    if(on_write):
-        writer.close()
-
-
-def test(dataloader, model, loss_fn):
-    size = len(dataloader.dataset)
-    num_batches = len(dataloader)
-    model.eval()
-    test_loss, correct = 0, 0
-    with torch.no_grad():
-        for X, y in dataloader:
-            X = X.to(device)
-            y0 = y[:,0].to(device)
-            y1 = y[:,1].to(device)
-            pred0, pred1 = model(X)
-            loss0 = loss_fn(pred0, y0)
-            loss1 = loss_fn(pred1, y1)
-            loss = loss0+loss1
-            test_loss += loss.item()
-            correct += (pred0.argmax(1) == y0).type(torch.float).sum().item() + (pred1.argmax(1) == y1).type(torch.float).sum().item()
-    test_loss /= num_batches
-    correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-
-'''
-
-'''
-def get_resnet(num_classes: int=4) -> nn.Module:
-   # ImageNetで事前学習済みの重みをロード
-    model = resnet18(weights='DEFAULT')
-
-   # ここで更新する部分の重みは初期化される
-    model.conv1 = nn.Conv2d(
-        in_channels=3*3*IMAGE_NUM,
-        out_channels=64,
-        kernel_size=model.conv1.kernel_size,
-        stride=model.conv1.stride,
-        padding=model.conv1.padding,
-        bias=False
-   )
-
-    model.fc = nn.S(
-        in_features=model.fc.in_features,
-        out_features=num_classes
-    )
-    
-    with open("model_architecture.txt","wt") as f:
-        print(type(model),file=f)
-    return model
-'''
 def get_resnet(num_label: int=2) -> nn.Module:
-    model = resnet18(weights='DEFAULT')
+    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
 
     class outLayer(nn.Module):
         def __init__(self, in_units):
@@ -238,9 +162,9 @@ def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
         optimizer.step()
         optimizer.zero_grad()
 
-        if batch % 100 == 0:
-            loss, current = loss.item(), (batch + 1) * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        
+    loss, current = loss.item(), (batch + 1) * len(X)
+    print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     
     if(bool_write):
         writer.close()
