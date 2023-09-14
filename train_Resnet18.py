@@ -12,6 +12,7 @@ import pickle
 from separate import separate_label, separate_img
 from tqdm import tqdm
 import numpy as np
+import time
 from datetime import datetime
 
 device = (
@@ -181,7 +182,7 @@ def get_resnet(num_classes: int=4) -> nn.Module:
     return model
 '''
 def get_resnet(num_label: int=2) -> nn.Module:
-    model = resnet18()
+    model = resnet18(weights='DEFAULT')
 
     class outLayer(nn.Module):
         def __init__(self, in_units):
@@ -218,8 +219,9 @@ def get_resnet(num_label: int=2) -> nn.Module:
 def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
     size = len(dataloader.dataset)
     model.train()
-    if(on_write):
-        day = datetime.now().strftime("%Y-%m-%d/%H:%M:%S")
+    bool_write = (on_write and (epoch+1)%5==0)
+    if bool_write:
+        day = datetime.now().strftime(f"%Y-%m-%d/%H:%M:%S_epoch:{epoch+1}")
         writer = SummaryWriter(log_dir="runs/"+day)
 
     for batch, (X, y) in enumerate(tqdm(dataloader)):
@@ -229,7 +231,7 @@ def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
         pred = model(X)
         loss = loss_fn(pred,y)
 
-        if(writer):
+        if(bool_write):
             writer.add_scalar("loss",loss,batch)
         # Backpropagation
         loss.backward()
@@ -240,7 +242,7 @@ def train(dataloader, model, loss_fn, optimizer, epoch ,on_write:bool=False):
             loss, current = loss.item(), (batch + 1) * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     
-    if(writer):
+    if(bool_write):
         writer.close()
 
 def test(dataloader, model, loss_fn):
@@ -260,6 +262,7 @@ def test(dataloader, model, loss_fn):
             test_loss /= num_batches
     tl_correct /= size
     is_correct /= size
+    time.sleep(2.)
     print(f"Test Error: \n TrafficLight Accuracy: {(100*tl_correct):>0.1f}%,  Intersection Accuracy: {(100*is_correct):>0.1f}% \nAvg loss: {test_loss:>8f} \n")
 
 

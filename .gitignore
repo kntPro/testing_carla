@@ -5,3 +5,4 @@ model/
 *.mp4
 misc/
 lightning_logs/
+runs/
