@@ -19,6 +19,7 @@ import timeit
 from train_Resnet18 import ThreeImageToTensorDataset, get_resnet
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from PIL import Image
 
 device = (
     "cuda"
@@ -407,5 +408,43 @@ def out_label_to_np_label():  #carlaで収集したラベルと、そこからnp
 
     for i in files: i.close()
 
-print(ResNet18_Weights.IMAGENET1K_V1.transforms())
-print(dir(torchvision.transforms._presets))
+def PIL_image_to_tensor(): #PIL.Imageをtorchvision.transformsを使って変換しようと試行錯誤した形跡
+    image_path = IMAGE_PATH + random.sample(os.listdir(IMAGE_PATH),1)[0]
+    rgb_img = Image.open(image_path).convert("RGB")
+    rgb_img.show()
+
+    transforms = ResNet18_Weights.IMAGENET1K_V1.transforms()
+    rgb_tensor=transforms(rgb_img)
+    print(rgb_tensor.size())
+    tensor_transform = ResNet18_Weights.IMAGENET1K_V1.transforms()
+    tensor_img = read_image(image_path,mode=ImageReadMode.RGB)
+    t = tensor_transform(tensor_img)
+    print(t.size())
+
+    PILtransform = torchvision.transforms.ToPILImage()
+    a = PILtransform(rgb_tensor)
+    b = PILtransform(t)
+    a.show()
+    b.show()
+    print(torch.equal(t,rgb_tensor))
+
+def test_tensorboard():
+    writer = SummaryWriter(log_dir='./log_test')
+    for _ in range(5):
+        for i in range(100):
+            train_loss = np.random.randn()
+            if (i + 1) % 5 == 0: # 5エポックに一度バリデーションロスを計算
+                val_loss = np.random.randn()
+                writer.add_scalars(
+                        'Loss',
+                        {'train_loss': train_loss, 'val_loss': val_loss}, # train_lossとval_lossの両方を記録
+                        i+1)
+            else:
+                writer.add_scalars(
+                        'Loss',
+                        {'train_loss': train_loss}, # train_lossのみを記録
+                        i+1)
+
+    writer.close()
+
+test_tensorboard()
